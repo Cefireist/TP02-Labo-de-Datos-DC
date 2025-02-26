@@ -1,8 +1,19 @@
-# -*- coding: utf-8 -*-
 """
-Created on Wed Feb 26 16:30:07 2025
+Laboratorio de datos - Verano 2025
+Trabajo Práctico N° 1 
 
-@author: PC
+Integrantes:
+- Sebastian Ceffalotti - sebastian.ceffalotti@gmail.com
+- Aaron Cuellar - aaroncuellar2003@gmail.com
+- Rodrigo Coppa - rodrigo.coppa98@gmail.com
+
+Descripción:
+En este script realizamos los graficos necesarios para el realizar
+el analisis exploratorio de la fuente de datos MNIST-C
+
+Detalles técnicos:
+- Lenguaje: Python
+- Librerías utilizadas: numpy, matplotlib, duckdb, pandas, seaborn y scikit-learn
 """
 
 #%% IMPORTO LAS LIBRERIAS
@@ -16,7 +27,6 @@ mnist = pd.read_csv("mnist_c_fog_tp.csv", index_col = 0)
 
 mnist.head()
 #%%
-
 y = mnist["labels"]  # Etiqueta (dígito)
 X = mnist.drop(columns = ["labels"])  # Datos de imagen (píxeles)
 
@@ -28,18 +38,11 @@ plt.show()
 
 # %% Media y varianza de los pixeles
 pixel_media = X.mean(axis=0).values.reshape((28,28))
-pixel_varianza = X.var(axis=0).values.reshape((28,28))
 
 # %% Mapa de calor de la media de los pixeles
 plt.figure(figsize=(8, 6))
 sns.heatmap(pixel_media, cmap="inferno", xticklabels=False, yticklabels=False)
 plt.title("Mapa de calor de la media de los píxeles")
-plt.show()
-
-# %% Mapa de calor de la varianza de los pixeles
-plt.figure(figsize=(8, 6))
-sns.heatmap(pixel_varianza, cmap="inferno", xticklabels=False, yticklabels=False)
-plt.title("Mapa de calor de la varianza de los píxeles")
 plt.show()
 
 # %% Imagen promedio de cada digito
@@ -99,17 +102,7 @@ sns.heatmap(digito_0_media, cmap="inferno", xticklabels=False, yticklabels=False
 plt.title("Imagen promedio del dígito 0")
 plt.show()
 
-#%% Varianza de los píxeles del dígito 0
-digito_0_varianza = digito_0.var(axis=0).values.reshape((28, 28))
-
-# %% Mapa de calor de la varianza de los píxeles del dígito 0
-plt.figure(figsize=(8, 6))
-sns.heatmap(digito_0_varianza, cmap="inferno", xticklabels=False, yticklabels=False)
-plt.title("Mapa de calor de la varianza de los píxeles del dígito 0")
-plt.show()
-
-# %%
-# Mostramos ejemplos aleatorios del dígito 0
+# %% Mostramos ejemplos aleatorios del dígito 0
 fig, axes = plt.subplots(2, 5, figsize=(10, 5))
 sample_images = digito_0.sample(10, random_state=42).values.reshape(10, 28, 28)
 
