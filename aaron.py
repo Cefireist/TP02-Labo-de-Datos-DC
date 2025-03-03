@@ -50,13 +50,18 @@ mnistc = mnistc.rename(columns={mnistc.columns[0]: 'indice'})
 ################
 # Funciones 
 ################
-
-# funcion que toma una fila del mnist (img) y la grafica
-def graficar_imagen(valores):
-    arr_img = valores.to_numpy().reshape(28, 28)
-    plt.imshow(arr_img, cmap='gray')
-    plt.axis('off')
-    plt.show()
+    
+# funcion que toma 8 filas del mnistc y los grafica en una fig
+def graficar_imagenes(df_valores, filas, cols, title):
+    fig, ax = plt.subplots(filas, cols)
+    fig.suptitle(title)
+    
+    for i in range(filas):
+        for j in range(cols):
+            num_fila = cols*i + j
+            ax[i, j].imshow(df_valores.iloc[num_fila].to_numpy().reshape(28, 28), cmap='gray')
+            ax[i][j].axis('off')
+            
 
 #%% 
 ################
@@ -95,9 +100,66 @@ desbalance = apariciones.max() - apariciones.min()
 print('desbalance entre cantidad de clases:', desbalance)
 
 
-# grafico algunos digitos
-graficar_imagen(data.iloc[1])
-graficar_imagen(data.iloc[2025])
-graficar_imagen(data.iloc[912])
+# figuras con 8 graficos de ejemplo por numero
+for i in range(10):
+    arr = mnistc[mnistc['labels'] == i].iloc[0:8].iloc[:, 1:785] # agarro datos para img de primeros 4 valores con etiqueta num
+    graficar_imagenes(arr, 2, 4, f'grafico de 8 numeros {i}')
+
+# grafico 30 imagenes 0 para ver sus similitudes
+arr_ceros = mnistc[mnistc['labels'] == 0].iloc[0:30].iloc[:, 1:785]
+graficar_imagenes(arr_ceros, 5, 6, 'grafico de 30 ceros')
+
+# grafico 30 imagenes 7 para ver sus similitudes
+arr_sietes = mnistc[mnistc['labels'] == 7].iloc[0:30].iloc[:, 1:785]
+graficar_imagenes(arr_sietes, 5, 6, 'grafico de 30 sietes')
+    
+
+# visualizacion de la media por pixel de cada clase
+fig, ax = plt.subplots(2, 5, figsize=(10, 5)) 
+fig.suptitle("Media de cada píxel por clase")
+for numero in range(10):
+    # imagenes de la clase actual
+    data_clase = data[mnistc['labels'] == numero]
+    
+    # calcular la media por pixel
+    media_por_pixel = np.mean(data_clase.to_numpy(), axis=0).reshape(28, 28)
+
+    # graficar
+    ax_actual = ax[numero // 5, numero % 5]  # ubicacion
+    ax_actual.imshow(media_por_pixel, cmap='gray')
+    ax_actual.set_title(f"numero {numero}")
+    ax_actual.axis('off')
+plt.show()
+
+
+# desviacion. las partes mas oscuras son las que menos varian
+fig, axes = plt.subplots(2, 5, figsize=(10, 5))  # 2 filas, 5 columnas
+fig.suptitle("Desviación estándar de cada píxel por clase")
+
+for numero in range(10):
+    # Filtrar imágenes de la clase actual
+    data_clase = data[mnistc['labels'] == numero]
+
+    # Calcular la desviación estándar por píxel
+    std_por_pixel = np.std(data_clase.to_numpy(), axis=0).reshape(28, 28)
+
+    # Seleccionar el subplot correspondiente
+    ax_actual = axes[numero // 5, numero % 5]
+    ax_actual.imshow(std_por_pixel, cmap='gray')
+    ax_actual.set_title(f"Número {numero}")
+    ax_actual.axis('off')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
