@@ -21,20 +21,24 @@ Detalles técnicos:
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
 
 # %% LECTURA DE ARCHIVOS
-mnist = pd.read_csv("mnist_c_fog_tp.csv", index_col = 0)
 
 
-#%%
-labels = mnist["labels"]
+#rutas
+_ruta_actual = os.getcwd()
+_ruta_mnistc = os.path.join(_ruta_actual, 'mnist_c_fog_tp.csv')
+
+# lectura mnistc, con el index_col podes decirle que columna usar de indice :)
+mnistc = pd.read_csv(_ruta_mnistc, index_col = 0)
+labels = mnistc["labels"]
 # Guardo los pixeles en X 
-X = mnist.drop(columns = ["labels"]) 
+X = mnistc.drop(columns = ["labels"]) 
 
 #%% EJEMPLO PARA GRAFICAR UNA IMAGEN
 
@@ -66,21 +70,20 @@ def graficarDigitos(digito, semilla):
     plt.suptitle(f"Ejemplos de imagenes del digito {digito}")
     plt.show()
 #%%
-graficarDigitos(0,1)
-graficarDigitos(1,1)
+for digito in range(0,10):
+    graficarDigitos(digito,1)
 
 #%% ACA VA EL EJERCICIO 2
 
-# Leo los datos para usar
-datos = mnist[mnist["labels"].isin([0, 1])]
+# Leo los datos para usar, saco los de 0 y 1  solamente
+datos = mnistc[mnistc["labels"].isin([0, 1])]
 labels_bin = datos["labels"]
 
-#%%
 # Cuento y veo el balance de clases
 contador = labels_bin.value_counts()
 print(f"Hay {contador[0]} ceros")
 print(f"hay {contador[1]} unos")
-print("No esta balanceada la cantidad de clases")
+print("No esta balanceada la cantidad de clases, por eso las balanceo")
 
 # separo los datos en TRAIN y TEST, hago 80 % train y el resto para test,
 # manteniendo el balance de clase
@@ -120,6 +123,66 @@ def obtenerPosColumna(posicion):
     fila, columna = posicion[0], posicion[1]
     return 28*(fila-1) + columna - 1 # resto porque arranca en 0 (?
 
+def entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, nro_pixeles):
+    rango_k = np.arange(1,25,1)
+    
+    accuracy = []
+    precision = []
+    recall = []
+    
+    # pruebo diferentes valores de k
+    for k in rango_k:
+        knn = KNeighborsClassifier(n_neighbors=k)
+        knn.fit(X_train_seleccionado, y_train)
+        # veo las predicciones
+        y_pred = knn.predict(X_test_seleccionado)
+        # Calculo las metricas
+        accuracy.append(accuracy_score(y_test, y_pred))
+        precision.append(precision_score(y_test, y_pred))
+        recall.append(recall_score(y_test, y_pred))
+        cm = confusion_matrix(y_test, y_pred)
+        
+        print(f"K = {k}")
+        print(cm)
+        print("")
+    # Grafico la precisión en función de k
+    plt.figure(figsize=(10, 6))
+    plt.plot(rango_k, accuracy, marker='o', linestyle='--', color='r', label = "accuracy")
+    plt.plot(rango_k, precision, marker='o', linestyle='--', color='g', label = "precision")
+    plt.plot(rango_k, recall, marker='o', linestyle='--', color='b', label = "recall")
+    
+    plt.title(f'Metricas KNN en función de k con {nro_pixeles} pixeles')
+    plt.xlabel('Número de vecinos (k)')
+    plt.ylabel('valor de metrica')
+    plt.legend()
+    plt.xticks(rango_k)  
+    plt.grid(True)
+    plt.show()
+    
+#%% ENTRENO EL MODELO eligiendo 1 pixel
+
+pixeles_seleccionados = [[14, 14]]
+columnas_pixeles = []
+for pixel in pixeles_seleccionados:
+    columnas_pixeles.append(obtenerPosColumna(pixel))
+
+X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
+X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 1)
+#%% ENTRENO EL MODELO eligiendo 2 pixeles
+
+pixeles_seleccionados = [[8, 14], [14, 14]]
+columnas_pixeles = []
+for pixel in pixeles_seleccionados:
+    columnas_pixeles.append(obtenerPosColumna(pixel))
+
+X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
+X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 2)
+#%% ENTRENO EL MODELO eligiendo 3 pixeles
+
 pixeles_seleccionados = [[8, 14], [14, 14], [22, 14]]
 columnas_pixeles = []
 for pixel in pixeles_seleccionados:
@@ -128,34 +191,31 @@ for pixel in pixeles_seleccionados:
 X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
 X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
-#%% ENTRENO EL MODELO
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 3)
 
-rango_k = np.arange(1,25,1)
+#%% ENTRENO EL MODELO eligiendo 4 pixeles
 
-exactitudes = []
+pixeles_seleccionados = [[8, 14], [11,14], [14, 14], [22, 14]]
+columnas_pixeles = []
+for pixel in pixeles_seleccionados:
+    columnas_pixeles.append(obtenerPosColumna(pixel))
 
-# pruebo diferentes valores de k
-for k in rango_k:
-    knn = KNeighborsClassifier(n_neighbors=k)
-    knn.fit(X_train_seleccionado, y_train)
-    # veo las predicciones
-    y_pred = knn.predict(X_test_seleccionado)
-    # Calculo la precisión
-    exactitud = accuracy_score(y_test, y_pred)
-    exactitudes.append(exactitud)
-    cm = confusion_matrix(y_test, y_pred)
-    print(f"K = {k}")
-    print(cm)
-    print("")
-# Grafico la precisión en función de k
-plt.figure(figsize=(10, 6))
-plt.plot(rango_k, exactitudes, marker='o', linestyle='-', color='b')
-plt.title('Exactitud del modelo KNN en función de k')
-plt.xlabel('Número de vecinos (k)')
-plt.ylabel('Exactitud')
-plt.xticks(rango_k)  
-plt.grid(True)
-plt.show()
+X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
+X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 4)
+
+
+#%% ENTRENO un modelo eligiendo otra cantidad de pixeles, uso 5
+
+pixeles_seleccionados = [[8, 14], [11,14], [14, 14], [18,14], [22, 14]]
+columnas_pixeles = []
+for pixel in pixeles_seleccionados:
+    columnas_pixeles.append(obtenerPosColumna(pixel))
+
+X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
+X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 5)
 
 #%%
