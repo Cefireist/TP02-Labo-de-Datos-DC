@@ -21,116 +21,141 @@ Detalles técnicos:
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
 
 # %% LECTURA DE ARCHIVOS
 mnist = pd.read_csv("mnist_c_fog_tp.csv", index_col = 0)
 
-mnist.head()
 
 #%%
-y = mnist["labels"] #columna con los digitos
+labels = mnist["labels"]
+# Guardo los pixeles en X 
 X = mnist.drop(columns = ["labels"]) 
 
-#Plot imagen 
+#%% EJEMPLO PARA GRAFICAR UNA IMAGEN
+
 img = np.array(X.iloc[0]).reshape((28,28))
 plt.imshow(img, cmap='gray') 
-plt.title(f'Dígito: {y.iloc[0]}')
+plt.title(f'Dígito: {labels.iloc[0]}')
 plt.show()
 
-array = X.loc[0].values.reshape(28,28)
-print(array)
+#%% FUNCION PARA GRAFICAR 10 imagenes de un sigito, semilla es para que sea al azar
+def graficarDigitos(digito, semilla):
+    # selecciono las imágenes del dígito
+    digitos = X[labels == digito]
+    
+    # elijo 10 imágenes aleatorias
+    muestras = digitos.sample(10, random_state=semilla)
+    imagenes = muestras.values.reshape(10, 28, 28)
+    
+    # Grafico
+    fig, axes = plt.subplots(nrows=2, ncols=5, figsize=(10, 5))
+    
+    indice = 0
+    num_filas = axes.shape[0]
+    num_columnas = axes.shape[1]
+    for i in range(num_filas):
+        for j in range(num_columnas):
+            axes[i, j].imshow(imagenes[indice], cmap='gray')
+            axes[i, j].axis('off')
+            indice += 1
+    plt.suptitle(f"Ejemplos de imagenes del digito {digito}")
+    plt.show()
+#%%
+graficarDigitos(0,1)
+graficarDigitos(1,1)
+
+#%% ACA VA EL EJERCICIO 2
+
+# Leo los datos para usar
+datos = mnist[mnist["labels"].isin([0, 1])]
+labels_bin = datos["labels"]
 
 #%%
-contador = mnist["labels"].value_counts()
+# Cuento y veo el balance de clases
+contador = labels_bin.value_counts()
+print(f"Hay {contador[0]} ceros")
+print(f"hay {contador[1]} unos")
+print("No esta balanceada la cantidad de clases")
 
-digito_0 = X[y == 0]
-fig, axes = plt.subplots(2, 5, figsize=(10, 5))
-sample_images = digito_0.sample(10, random_state=42).values.reshape(10, 28, 28)
+# separo los datos en TRAIN y TEST, hago 80 % train y el resto para test,
+# manteniendo el balance de clase
 
-for i, ax in enumerate(axes.flat):
-    ax.imshow(sample_images[i], cmap='gray')
-    ax.axis('off')
+X_train, X_test, y_train, y_test = train_test_split(datos, labels_bin,
+test_size = 0.2, stratify = labels_bin, random_state = 160)
 
-plt.suptitle("Ejemplos de imágenes del dígito 5")
+datos_ceros = datos[datos["labels"] == 0].drop(columns = "labels")
+datos_unos = datos[datos["labels"] == 1].drop(columns = "labels")
+
+#%% GRAFICO LAS IMAGENES PROMEDIO DE CADA DIGITO Y LA RESTA
+
+imagen_promedio_ceros = np.sum(datos_ceros, axis = 0)/len(datos_ceros)
+imagen_promedio_unos = np.sum(datos_unos, axis = 0)/len(datos_unos)
+
+img = np.array(imagen_promedio_ceros).reshape((28,28))
+plt.imshow(img, cmap='gray') 
+plt.title("Imagen promedio del 0")
 plt.show()
 
-digito_1 = X[y == 1]
-fig, axes = plt.subplots(2, 5, figsize=(10, 5))
-sample_images = digito_1.sample(10, random_state=42).values.reshape(10, 28, 28)
-
-for i, ax in enumerate(axes.flat):
-    ax.imshow(sample_images[i], cmap='gray')
-    ax.axis('off')
-
-plt.suptitle("Ejemplos de imágenes del dígito 5")
+img = np.array(imagen_promedio_unos).reshape((28,28))
+plt.imshow(img, cmap='gray') 
+plt.title("Imagen promedio del 1")
 plt.show()
 
+resta = np.abs(imagen_promedio_unos-imagen_promedio_ceros)
+img = np.array(resta).reshape((28,28))
+plt.imshow(img, cmap='gray') 
+plt.title("Resta imagenes promedio")
+plt.show()
 
-# %%
-image_data = X.iloc[2]
-print(image_data)
+print("""Viendo las imagenes elijo 3 pixeles de manera arbitraria, 
+      elijo el del centro, uno a la izquierda y otro a la derecha""")
+      
+#%% SELECCIONO LOS PIXELES Y EXTRAIGO ESOS DATOS PARA ENTRENAR EL KNN
+def obtenerPosColumna(posicion):
+    fila, columna = posicion[0], posicion[1]
+    return 28*(fila-1) + columna - 1 # resto porque arranca en 0 (?
 
-image_matrix = image_data.values.reshape(28,28)
+pixeles_seleccionados = [[8, 14], [14, 14], [22, 14]]
+columnas_pixeles = []
+for pixel in pixeles_seleccionados:
+    columnas_pixeles.append(obtenerPosColumna(pixel))
 
-fourier_transform = np.fft.fft2(image_matrix)
+X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
+X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
-fourier_shifted = np.fft.fftshift(fourier_transform)
+#%% ENTRENO EL MODELO
 
-magnitude = np.abs(fourier_shifted)
+rango_k = np.arange(1,25,1)
 
-fig, ax = plt.subplots(1, 2, figsize=(12,6))
+exactitudes = []
 
-ax[0].imshow(image_matrix, cmap ="gray")
-ax[0].set_title("Imagen Original")
+# pruebo diferentes valores de k
+for k in rango_k:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    knn.fit(X_train_seleccionado, y_train)
+    # veo las predicciones
+    y_pred = knn.predict(X_test_seleccionado)
+    # Calculo la precisión
+    exactitud = accuracy_score(y_test, y_pred)
+    exactitudes.append(exactitud)
+    cm = confusion_matrix(y_test, y_pred)
+    print(f"K = {k}")
+    print(cm)
+    print("")
+# Grafico la precisión en función de k
+plt.figure(figsize=(10, 6))
+plt.plot(rango_k, exactitudes, marker='o', linestyle='-', color='b')
+plt.title('Exactitud del modelo KNN en función de k')
+plt.xlabel('Número de vecinos (k)')
+plt.ylabel('Exactitud')
+plt.xticks(rango_k)  
+plt.grid(True)
+plt.show()
 
-ax[1].imshow(np.log(magnitude + 1), cmap ='gray')
-ax[1].set_title("Magnitud de la Transformada de Fourier")
 
 #%%
-
-# Crear una máscara para mantener solo las bajas frecuencias
-# Definir el tamaño de la ventana de las frecuencias bajas (por ejemplo, un 30% del tamaño total)
-rows, cols = image_matrix.shape
-center_row, center_col = rows // 2, cols // 2
-radius = int(min(rows, cols) * 0.2) # Mantener solo las frecuencias dentro de un radio del centro
-
-# Crear un filtro de baja frecuencia (mascara)
-mask = np.zeros((rows, cols), dtype=np.uint8)
-
-# Poner en 1 los valores dentro del radio
-for i in range(rows):
-    for j in range(cols):
-        if np.sqrt((i - center_row) ** 2 + (j - center_col) ** 2) < radius:
-            mask[i, j] = 1
-
-# Aplicar la máscara a las frecuencias
-fourier_filtered = fourier_shifted * mask
-
-# Deshacer el desplazamiento para obtener las frecuencias originales
-fourier_filtered_shifted_back = np.fft.ifftshift(fourier_filtered)
-
-# Reconstruir la imagen con las frecuencias bajas
-image_reconstructed = np.fft.ifft2(fourier_filtered_shifted_back).real
-
-# Mostrar la imagen original y la reconstruida con bajas frecuencias
-fig, ax = plt.subplots(1, 2, figsize=(12, 6))
-
-# Imagen original
-ax[0].imshow(image_matrix, cmap='gray')
-ax[0].set_title("Imagen Original")
-
-# Imagen reconstruida con frecuencias bajas
-ax[1].imshow(image_reconstructed, cmap='gray')
-ax[1].set_title("Reconstrucción con Frecuencias Bajas")
-
-plt.show()
-
-
-#%% CARGA DE DATOS
-
-
-#%% FUNCIONES A UTILIZAR
-
-
-#%% CODIGO PRINCIPAL

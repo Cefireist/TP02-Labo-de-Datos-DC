@@ -93,7 +93,7 @@ plt.ylabel("Frecuencia")
 plt.ylim(0, 9000)
 plt.title("Distribución de las clases")
 plt.show()
-
+#%%
 # desbalance de las clases
 apariciones = etiquetas.value_counts()
 desbalance = apariciones.max() - apariciones.min()
@@ -113,7 +113,7 @@ graficar_imagenes(arr_ceros, 5, 6, 'grafico de 30 ceros')
 arr_sietes = mnistc[mnistc['labels'] == 7].iloc[0:30].iloc[:, 1:785]
 graficar_imagenes(arr_sietes, 5, 6, 'grafico de 30 sietes')
     
-
+#%%
 # visualizacion de la media por pixel de cada clase
 fig, ax = plt.subplots(2, 5, figsize=(10, 5)) 
 fig.suptitle("Media de cada píxel por clase")
@@ -151,7 +151,7 @@ for numero in range(10):
 plt.show()
 
 
-
+#%%
 
 
 
