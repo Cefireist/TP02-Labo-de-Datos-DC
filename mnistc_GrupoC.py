@@ -19,10 +19,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import seabron as sns
 
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
+from sklearn.model_selection import cross_val_score
+from sklearn.tree import DecisionTreeClassifier
 
 #%% FUNCION PARA GRAFICAR 10 imagenes de un digito, semilla es para que sea al azar
 def graficarMuestraDigitos(digito, semilla):
