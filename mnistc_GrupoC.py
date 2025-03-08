@@ -26,35 +26,13 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
 from sklearn import tree
 
-#%% FUNCION PARA GRAFICAR 10 imagenes de un digito, semilla es para que sea al azar
-def graficarMuestraDigitos(digito, semilla):
-    # selecciono las imágenes del dígito
-    digitos = X[labels == digito]
-    
-    # elijo 10 imágenes aleatorias
-    muestras = digitos.sample(10, random_state=semilla)
-    imagenes = muestras.values.reshape(10, 28, 28)
-    
-    # Grafico
-    fig, axes = plt.subplots(nrows=2, ncols=5, figsize=(10, 5))
-    
-    indice = 0
-    num_filas = axes.shape[0]
-    num_columnas = axes.shape[1]
-    for i in range(num_filas):
-        for j in range(num_columnas):
-            axes[i, j].imshow(imagenes[indice], cmap='gray')
-            axes[i, j].axis('off')
-            indice += 1
-    plt.suptitle(f"Ejemplos de imagenes del digito {digito}")
-    plt.show()
-    
-#%% CACLULA LA IMAGEN PROMEDIO DE UN DIGITO
+#%% DECLARACION DE FUNCIONES
+#%% FUNCION QUE CALCULA LA INTENSIDAD PROMEDIO DE UN DIGITO
 def img_promedio_digito(datos, digito):
     datos_digito = datos[datos["labels"] == digito].drop(columns = "labels")
     img_promedio = np.sum(datos_digito, axis = 0)/len(datos_digito)
     return img_promedio
-#%%
+#%% FUNCION QUE CALCULA LA DESVIACION ESTANDAR PROMEDIO DE UN DIGITO
 def img_std_promedio_digito(datos, digito):
     # Filtra los datos para el dígito específico y elimina la columna de etiquetas
     datos_digito = datos[datos["labels"] == digito].drop(columns="labels")
@@ -64,12 +42,33 @@ def img_std_promedio_digito(datos, digito):
     
     # Devuelve la desviación estándar por píxel (no el promedio)
     return std_por_pixel
-
-#%% OBTENGO LA POSICION DE LA COLUMNA DE UN PIXEL DE ACUERDO A SUS COORDENADAS
+#%% FUNCION PARA GRAFICAR 15 IMAGENES ALEATORIAS DE UN DIGITO
+def graficarMuestraDigitos(digito, semilla):
+    # selecciono las imágenes del dígito
+    digitos = X[labels == digito]
+    
+    # elijo 15 imágenes aleatorias
+    muestras = digitos.sample(15, random_state=semilla)
+    imagenes = muestras.values.reshape(15, 28, 28)
+    
+    # Grafico
+    fig, axes = plt.subplots(nrows=3, ncols=5, figsize=(10, 5))
+    
+    indice = 0
+    num_filas = axes.shape[0]
+    num_columnas = axes.shape[1]
+    for i in range(num_filas):
+        for j in range(num_columnas):
+            axes[i, j].imshow(imagenes[indice], cmap='gray')
+            axes[i, j].axis('off')
+            indice += 1
+    plt.suptitle(f"Ejemplos de imagenes del digito {digito}", fontsize = 18)
+    plt.show()
+#%% FUNCION QUE CALCULA LA POSICION DE LA COLUMNA DE UN PIXEL DE ACUERDO A SUS COORDENADAS
 def obtenerPosColumna(posicion):
     fila, columna = posicion[0], posicion[1]
     return 28*(fila-1) + columna - 1 # resto porque arranca en 0 (? chequear esto
-#%% ENTRENO UN KNN CON LOS PIXELES SELECCIONADOS
+#%% FUNCION QUE ENTRENA UN KNN CON LOS PIXELES SELECCIONADOS
 def entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, nro_pixeles):
     rango_k = np.arange(1,25,1)
     
@@ -105,7 +104,7 @@ def entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 
     plt.xticks(rango_k)  
     plt.grid(True)
     plt.show()
-#%%ENTRENO UN ARBOL SEGUN HIPERPARAMETROS ELEGIDOS
+#%% FUNCION QUE ENTRENA UN ARBOL SEGUN HIPERPARAMETROS ELEGIDOS, CRITERIO Y MAXIMA PROFUNDIDAD
 def EntrenarArbol(alturas, kf, criterio):
     # matrices donde almacenar los resultados
     resultados_accuracy = np.zeros((nsplits, len(alturas)))
@@ -148,7 +147,7 @@ labels = mnistc["labels"]
 # Guardo los pixeles en X 
 X = mnistc.drop(columns = ["labels"]) 
 
-#%% ACA COMIENZA EL EJERCICIO 1.a
+#%% EJERCICIO 1.a
 #%% GRAFICO LA IMAGEN PROMEDIO DE TODOS LOS DIGITOS
 
 fig, axes = plt.subplots(3, 5, figsize=(12, 8))
@@ -177,7 +176,7 @@ cax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
 cbar = fig.colorbar(im, cax=cax)
 cbar.set_label("Intensidad promedio", fontsize=14)
 
-#%% GRAFICO LA REGION DE LOS PIXELES MENOS RELEVANTES.
+#%% GRAFICO LA REGION DE LOS PIXELES MENOS RELEVANTES
 
 umbral = 100 # lo elijo arbitrariamente viendo la imagen anterior
 # creo una mascara binaria para graficar
@@ -188,7 +187,7 @@ print(f"Porcentaje de píxeles con intensidad menor a 100: {100*pixeles_menores_
 plt.imshow(mascara, cmap='gray')
 plt.title("Píxeles con intensidad menor a 100 (negros)")
 plt.show()
-#%% GRAFICO LA IMAGEN DE LA DESVIACION ESTANDAR PROMEDIO DE TODOS LOS DIGITOS
+#%% GRAFICO LA IMAGEN DE LA DESVIACION ESTANDAR PROMEDIO DE TODOS LOS DIGITOS (QUIZAS SACARLO)
 
 # Esto si no los usamos quizas habria que sacarlo
 fig, axes = plt.subplots(2, 5, figsize=(12, 6))
@@ -204,10 +203,10 @@ fig.suptitle("Promedio de desviacion estandar por dígito", fontsize=18)
 cax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  
 cbar = fig.colorbar(im, cax=cax)
 cbar.set_label("Desviacion estandar promedio", fontsize=14)
-#%% ACA COMIENZA EL EJERCICIO 1.b
-
-# Calculo las distancias entre imagenes. Pienso cada imagen como un vector en R^784
-# entonces la distancia es la norma de la diferencia entre dos vectores
+#%% EJERCICIO 1.b
+#%% CALCULO LAS DISTANCIAS ENTRE LAS IMAGENES PROMEDIO DE CADA DIGITO
+# pienso cada imagen como un vector en R^784, entonces la distancia 
+# es la norma de la diferencia entre dos vectores
 
 imgs_promedio = {}
 for digito in range(0,10):
@@ -227,13 +226,13 @@ plt.ylabel('Digito')
 plt.title('Matriz de distancias entre imagenes')
 plt.show()
 
-#%% GRAFICO 10 MUESTRAS ALEATORIAS DE CADA DIGITO
+#%% EJERCICIO 1.c
+#%% GRAFICO 15 MUESTRAS ALEATORIAS DE CADA DIGITO, EN TODOS LOS DIGITOS HAY MUCHA VARIACION
 plt.figure(figsize=(10, 10))
 for digito in range(0,10):
-    graficarMuestraDigitos(digito,2)
+    graficarMuestraDigitos(digito,7)
     
-
-#%% ACA COMIENZA EL EJERCICIO 2
+#%% EJERCICIO 2
 #%% DE los datos extraigo los de 0 y 1, veo el balance y separo en train y test
 # Leo los datos para usar, saco los de 0 y 1  solamente
 datos = mnistc[mnistc["labels"].isin([0, 1])]
