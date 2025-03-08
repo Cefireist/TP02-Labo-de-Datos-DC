@@ -303,3 +303,22 @@ plt.xlabel("Predicción")
 plt.ylabel("Realidad")
 plt.title("Matriz de Confusión en Held-Out")
 plt.show()
+
+#%% Función para predecir el dígito de una imagen nueva
+def predecir_digito(imagen):
+    imagen_reshapeada = np.array(imagen).reshape(1, -1)  # Asegurar el formato correcto
+    prediccion = best_clf.predict(imagen_reshapeada)[0]
+    return prediccion
+
+# %%
+# Tomar una imagen del dataset de test y predecir su número
+indice_ejemplo = 1542  # Cambiar para probar distintas imágenes
+imagen_ejemplo = X_held.iloc[indice_ejemplo]
+digito_predicho = predecir_digito(imagen_ejemplo)
+
+# Mostrar la imagen real
+plt.imshow(imagen_ejemplo.values.reshape(28,28), cmap="gray")
+plt.title(f"Predicción del modelo: {digito_predicho}")
+plt.axis("off")
+plt.show()
+
