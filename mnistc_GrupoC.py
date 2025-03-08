@@ -54,6 +54,16 @@ def img_promedio_digito(datos, digito):
     datos_digito = datos[datos["labels"] == digito].drop(columns = "labels")
     img_promedio = np.sum(datos_digito, axis = 0)/len(datos_digito)
     return img_promedio
+#%%
+def img_std_promedio_digito(datos, digito):
+    # Filtra los datos para el dígito específico y elimina la columna de etiquetas
+    datos_digito = datos[datos["labels"] == digito].drop(columns="labels")
+    
+    # Calcula la desviación estándar a lo largo del eje 0 (para cada píxel)
+    std_por_pixel = np.std(datos_digito, axis=0)
+    
+    # Devuelve la desviación estándar por píxel (no el promedio)
+    return std_por_pixel
 
 #%% OBTENGO LA POSICION DE LA COLUMNA DE UN PIXEL DE ACUERDO A SUS COORDENADAS
 def obtenerPosColumna(posicion):
@@ -138,12 +148,83 @@ labels = mnistc["labels"]
 # Guardo los pixeles en X 
 X = mnistc.drop(columns = ["labels"]) 
 
-#%% ACA COMIENZA EL EJERCICIO 1
-#%% EJEMPLO PARA GRAFICAR UNA IMAGEN
+#%% ACA COMIENZA EL EJERCICIO 1.a
+#%% GRAFICO LA IMAGEN PROMEDIO DE TODOS LOS DIGITOS
 
-img = np.array(X.iloc[0]).reshape((28,28))
-plt.imshow(img, cmap='gray') 
-plt.title(f'Dígito: {labels.iloc[0]}')
+fig, axes = plt.subplots(3, 5, figsize=(12, 8))
+axes = axes.flatten()
+suma_todos_digitos = np.zeros((28, 28))
+
+for digito in range(0,10):
+    img_prom = img_promedio_digito(mnistc, digito)
+    img = np.array(img_prom).reshape((28,28))
+    suma_todos_digitos += img
+    
+    im = axes[digito].imshow(img, cmap='inferno')
+    axes[digito].set_title(f"Digito {digito}")
+
+# promedio de todos los digitos
+suma_todos_digitos = suma_todos_digitos/10
+
+# oculto ejes vacios y muestro el promedio entre todos los digitos
+for i in [10, 11, 13, 14]:
+    axes[i].axis('off')
+axes[12].imshow(suma_todos_digitos, cmap='inferno')
+axes[12].set_title("Suma de todos los dígitos")
+
+fig.suptitle("Promedio de intensidad por dígito", fontsize=18)
+cax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  
+cbar = fig.colorbar(im, cax=cax)
+cbar.set_label("Intensidad promedio", fontsize=14)
+
+#%% GRAFICO LA REGION DE LOS PIXELES MENOS RELEVANTES.
+
+umbral = 100 # lo elijo arbitrariamente viendo la imagen anterior
+# creo una mascara binaria para graficar
+mascara = suma_todos_digitos >= umbral
+pixeles_menores_100 = np.sum(suma_todos_digitos < umbral)
+
+print(f"Porcentaje de píxeles con intensidad menor a 100: {100*pixeles_menores_100/784}")
+plt.imshow(mascara, cmap='gray')
+plt.title("Píxeles con intensidad menor a 100 (negros)")
+plt.show()
+#%% GRAFICO LA IMAGEN DE LA DESVIACION ESTANDAR PROMEDIO DE TODOS LOS DIGITOS
+
+# Esto si no los usamos quizas habria que sacarlo
+fig, axes = plt.subplots(2, 5, figsize=(12, 6))
+axes = axes.flatten()
+for digito in range(0,10):
+    std_por_pixel = img_std_promedio_digito(mnistc, digito)
+    img_std = np.array(std_por_pixel).reshape((28, 28))
+    
+    im = axes[digito].imshow(img_std, cmap='inferno')
+    axes[digito].set_title(f"Digito {digito}")
+    
+fig.suptitle("Promedio de desviacion estandar por dígito", fontsize=18)
+cax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  
+cbar = fig.colorbar(im, cax=cax)
+cbar.set_label("Desviacion estandar promedio", fontsize=14)
+#%% ACA COMIENZA EL EJERCICIO 1.b
+
+# Calculo las distancias entre imagenes. Pienso cada imagen como un vector en R^784
+# entonces la distancia es la norma de la diferencia entre dos vectores
+
+imgs_promedio = {}
+for digito in range(0,10):
+    imagenes_digito = mnistc[mnistc["labels"] == digito].drop(columns="labels")
+    imgs_promedio[digito] = np.mean(imagenes_digito, axis=0)
+
+# creo una matriz donde guardar las distancias promedio entre cada digito, y las guardo
+distancias = np.zeros((10, 10))  
+for i in range(10):
+    for j in range(10):
+        distancias[i, j] = np.linalg.norm(imgs_promedio[i] - imgs_promedio[j])
+
+distancias = distancias.astype(int) 
+sns.heatmap(distancias, annot=True, fmt='d', cmap='Blues')
+plt.xlabel('Digito')
+plt.ylabel('Digito')
+plt.title('Matriz de distancias entre imagenes')
 plt.show()
 
 #%% GRAFICO 10 MUESTRAS ALEATORIAS DE CADA DIGITO
@@ -151,22 +232,6 @@ plt.figure(figsize=(10, 10))
 for digito in range(0,10):
     graficarMuestraDigitos(digito,2)
     
-#%% GRAFICO LA IMAGEN PROMEDIO DE TODOS LOS DIGITOS
-plt.figure(figsize=(12, 6))
-for digito in range(0,10):
-    img_prom = img_promedio_digito(mnistc, digito)
-    img = np.array(img_prom).reshape((28,28))
-    
-    plt.subplot(2, 5, digito + 1)
-    plt.imshow(img, cmap='inferno')
-    plt.title(f"Promedio del {digito}")
-#%% VEO LOS PIXELES CON MAYOR VARIANZA
-varianza_pixeles = np.var(X, axis=0)
-varianza_imagen = np.array(varianza_pixeles).reshape((28, 28))
-plt.imshow(varianza_imagen, cmap='inferno')
-plt.colorbar()  
-plt.title("Varianza de los pixeles")
-plt.show()
 
 #%% ACA COMIENZA EL EJERCICIO 2
 #%% DE los datos extraigo los de 0 y 1, veo el balance y separo en train y test
@@ -289,7 +354,7 @@ X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, labels, test_size=0.2, 
 alturas = [2,4,6,8,10]  # alturas del arbol
 nsplits = 3  # numero de folds
 # generamos los folds, stratifiedkfold permite dividir de forma balanceada los folds
-kf = StratifiedKFold(n_splits=nsplits, shuffle=True, random_state=160)
+kf = StratifiedKFold(n_splits=nsplits, shuffle=True, random_state=7)
 
 #%% ENTRENO ARBOLES USANDO GINI
 resultados_accuracy, resultados_precision, resultados_recall = EntrenarArbol(alturas, kf, "gini")
@@ -356,14 +421,9 @@ plt.title('Matriz de Confusión')
 plt.show()
 #%% GRAFICO EL ARBOL 
 plt.figure(figsize=(50, 20))  
-tree.plot_tree(
-    arbol_elegido,
-    filled=True, 
-    feature_names=[f"pixel_{i}" for i in range(X_dev.shape[1])],  # Nombres de las características (píxeles)
-    class_names=[str(i) for i in range(10)],  # Nombres de las clases (dígitos del 0 al 9)
-    fontsize=10,  
-    max_depth=3  # Limitar la visualización a los primeros 3 niveles
-)
+tree.plot_tree(arbol_elegido, filled=True, 
+    feature_names=[f"pixel_{i}" for i in range(X_dev.shape[1])],
+    class_names=[str(i) for i in range(10)], fontsize=10, max_depth=3)
 plt.title("Primeros 3 niveles del arbol de decision final")
 plt.show()
 

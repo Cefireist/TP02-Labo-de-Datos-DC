@@ -1,6 +1,6 @@
 """
 Laboratorio de datos - Verano 2025
-Trabajo Práctico N° 1 
+Trabajo Práctico N° 2 
 
 Integrantes:
 - Sebastian Ceffalotti - sebastian.ceffalotti@gmail.com
