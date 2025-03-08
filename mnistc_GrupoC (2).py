@@ -18,13 +18,14 @@ abcesllueve1
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import os
+import seaborn as sns
 
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
-from sklearn import tree
+from sklearn.model_selection import cross_val_score
+from sklearn.tree import DecisionTreeClassifier
 
 #%% FUNCION PARA GRAFICAR 10 imagenes de un digito, semilla es para que sea al azar
 def graficarMuestraDigitos(digito, semilla):
@@ -95,37 +96,6 @@ def entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 
     plt.xticks(rango_k)  
     plt.grid(True)
     plt.show()
-#%%ENTRENO UN ARBOL SEGUN HIPERPARAMETROS ELEGIDOS
-def EntrenarArbol(alturas, kf, criterio):
-    # matrices donde almacenar los resultados
-    resultados_accuracy = np.zeros((nsplits, len(alturas)))
-    resultados_precision = np.zeros((nsplits, len(alturas)))
-    resultados_recall = np.zeros((nsplits, len(alturas)))
-    
-    # en cada folds, entrenamos cada modelo y guardo todo en las matrices de resultados
-    for i, (train_index, test_index) in enumerate(kf.split(X_dev, y_dev)):
-        kf_X_train, kf_X_test = X_dev.iloc[train_index], X_dev.iloc[test_index]
-        kf_y_train, kf_y_test = y_dev.iloc[train_index], y_dev.iloc[test_index]
-        
-        for j, hmax in enumerate(alturas):
-            # entreno al arbol
-            arbol = tree.DecisionTreeClassifier(max_depth=hmax, criterion=criterio)
-            arbol.fit(kf_X_train, kf_y_train)
-            
-            # hago la prediccion y calculo las metricas
-            pred = arbol.predict(kf_X_test)
-            accuracy = accuracy_score(kf_y_test, pred)
-            # se usa macro para multiclase
-            precision = precision_score(kf_y_test, pred, average='macro')
-            recall = recall_score(kf_y_test, pred, average='macro')  
-            
-            # guardo los resultados
-            resultados_accuracy[i, j] = accuracy
-            resultados_precision[i, j] = precision
-            resultados_recall[i, j] = recall
-    
-    return resultados_accuracy, resultados_precision, resultados_recall
-    
 # %% LECTURA DE ARCHIVOS
 
 #rutas
@@ -149,7 +119,7 @@ plt.show()
 #%% GRAFICO 10 MUESTRAS ALEATORIAS DE CADA DIGITO
 plt.figure(figsize=(10, 10))
 for digito in range(0,10):
-    graficarMuestraDigitos(digito,2)
+    graficarMuestraDigitos(digito,1)
     
 #%% GRAFICO LA IMAGEN PROMEDIO DE TODOS LOS DIGITOS
 plt.figure(figsize=(12, 6))
@@ -160,13 +130,6 @@ for digito in range(0,10):
     plt.subplot(2, 5, digito + 1)
     plt.imshow(img, cmap='inferno')
     plt.title(f"Promedio del {digito}")
-#%% VEO LOS PIXELES CON MAYOR VARIANZA
-varianza_pixeles = np.var(X, axis=0)
-varianza_imagen = np.array(varianza_pixeles).reshape((28, 28))
-plt.imshow(varianza_imagen, cmap='inferno')
-plt.colorbar()  
-plt.title("Varianza de los pixeles")
-plt.show()
 
 #%% ACA COMIENZA EL EJERCICIO 2
 #%% DE los datos extraigo los de 0 y 1, veo el balance y separo en train y test
@@ -259,7 +222,7 @@ X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 4)
 
 
-#%% ENTRENO EL MODELO eligiendo 5 pixeles
+#%% ENTRENO un modelo eligiendo otra cantidad de pixeles, uso 5
 
 pixeles_seleccionados = [[8, 14], [11,14], [14, 14], [18,14], [22, 14]]
 columnas_pixeles = []
@@ -270,101 +233,94 @@ X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
 X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
 entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 5)
-#%% PRUEBO ELIGIENDO OTROS 3 PIXELES
-pixeles_seleccionados = [[17, 16], [14, 14], [11, 10]]
-columnas_pixeles = []
-for pixel in pixeles_seleccionados:
-    columnas_pixeles.append(obtenerPosColumna(pixel))
 
-X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
-X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+#%% Ejercicio 3
 
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 3)
+# Definimos variables predictoras y la etiqueta
+y = mnistc["labels"]
 
-#%% ACA COMIENZA EL EJERCICIO 3
-#%% DIVIDO LOS DATOS EN DEV Y HELD OUT, DEFINO PARAMETROS DE ENTRENAMIENTO
+# Separamos en desarrollo (80%) y held-out (20%)
+X_dev, X_held, y_dev, y_held = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
-X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, labels, test_size=0.2, random_state=160, stratify=labels)
+# %% Entrenamos el arbol de decision
+depth_range = range(1, 11)  # Profundidades de 1 a 10
+results = {}
 
-alturas = [2,4,6,8,10]  # alturas del arbol
-nsplits = 3  # numero de folds
-# generamos los folds, stratifiedkfold permite dividir de forma balanceada los folds
-kf = StratifiedKFold(n_splits=nsplits, shuffle=True, random_state=160)
+for depth in depth_range:
+    clf = DecisionTreeClassifier(max_depth=depth, random_state=42)
+    clf.fit(X_dev, y_dev)  # Entrenar en conjunto de desarrollo
+    y_pred = clf.predict(X_dev)  # Predecir en el mismo conjunto
+    acc = accuracy_score(y_dev, y_pred)
+    results[depth] = acc
+    print(f"Profundidad {depth} - Exactitud: {acc:.4f}")
 
-#%% ENTRENO ARBOLES USANDO GINI
-resultados_accuracy, resultados_precision, resultados_recall = EntrenarArbol(alturas, kf, "gini")
-
-# calculo el promedio de todos los folds
-scores_accuracy = resultados_accuracy.mean(axis=0)
-scores_precision = resultados_precision.mean(axis=0)
-scores_recall = resultados_recall.mean(axis=0)
-
-# grafica las métricas
-plt.plot(alturas, scores_accuracy, marker='o', linestyle='--', color='r', label="Accuracy")
-plt.plot(alturas, scores_precision, marker='o', linestyle='--', color='g', label="Precision")
-plt.plot(alturas, scores_recall, marker='o', linestyle='--', color='b', label="Recall")
-plt.xlabel("Profundidad maxima")
-plt.ylabel("Metrica")
-plt.title("Metricas en funcion de la profundidad usando GINI")
-plt.legend()
+# Graficamos los resultados
+plt.figure(figsize=(8, 5))
+plt.plot(depth_range, list(results.values()), marker='o', linestyle='-', color='b')
+plt.xlabel("Profundidad del Árbol")
+plt.ylabel("Exactitud")
+plt.title("Exactitud en función de la profundidad del árbol")
 plt.grid(True)
 plt.show()
 
-#%% ENTRENO ARBOLES USANDO ENTROPIA
-resultados_accuracy, resultados_precision, resultados_recall = EntrenarArbol(alturas, kf, "entropy")
+# %% Validacion cruzada con k = 5
 
-# calculo el promedio de todos los folds
-scores_accuracy = resultados_accuracy.mean(axis=0)
-scores_precision = resultados_precision.mean(axis=0)
-scores_recall = resultados_recall.mean(axis=0)
+best_score = 0
+best_depth = None
 
-# Graficar las métricas
-plt.plot(alturas, scores_accuracy, marker='o', linestyle='--', color='r', label="Accuracy")
-plt.plot(alturas, scores_precision, marker='o', linestyle='--', color='g', label="Precision")
-plt.plot(alturas, scores_recall, marker='o', linestyle='--', color='b', label="Recall")
-plt.xlabel("Profundidad maxima")
-plt.ylabel("Metrica")
-plt.title("Metricas en funcion de la profundidad usando ENTROPIA")
-plt.legend()
-plt.grid(True)
-plt.show()
+for depth in depth_range:
+    clf = DecisionTreeClassifier(max_depth=depth, random_state=42)
+    scores = cross_val_score(clf, X_dev, y_dev, cv=5, scoring='accuracy')  # K-Folding con k=5
+    mean_score = scores.mean()
+    
+    print(f"Profundidad {depth} - Media de Exactitud: {mean_score:.4f}")
+    
+    if mean_score > best_score:
+        best_score = mean_score
+        best_depth = depth
 
-#%% entreno el modelo elegido en el conjunto dev entero para la mejor profundidad
-mejor_profundidad = 10
-mejor_criterio = "entropy"
-arbol_elegido = tree.DecisionTreeClassifier(max_depth=mejor_profundidad, criterion=mejor_criterio)
-arbol_elegido.fit(X_dev, y_dev)
+print(f"\nMejor profundidad: {best_depth} con exactitud promedio de {best_score:.4f}")
 
-# Predecir en el conjunto de validación (held-out)
-y_pred = arbol_elegido.predict(X_heldout)
+# %% Matriz de Confusion
 
-# Calcular las métricas finales
-score_accuracy = accuracy_score(y_heldout, y_pred)
-score_precision = precision_score(y_heldout, y_pred, average='macro')
-score_recall = recall_score(y_heldout, y_pred, average='macro')
+# Entrenamos el mejor modelo en el conjunto completo de desarrollo
+best_clf = DecisionTreeClassifier(max_depth=best_depth, random_state=42)
+best_clf.fit(X_dev, y_dev)
 
-print(f"Accuracy del arbol con depth {mejor_profundidad} en HELD OUT: {score_accuracy}")
-print(f"Precision del arbol con depth {mejor_profundidad} en HELD OUT: {score_precision}")
-print(f"Recall del arbol con depth {mejor_profundidad} en HELD OUT: {score_recall}")
+# Evaluamos en el conjunto held-out
+y_held_pred = best_clf.predict(X_held)
+held_accuracy = accuracy_score(y_held, y_held_pred)
+
+print(f"\nExactitud en conjunto held-out: {held_accuracy:.4f}")
 
 # Matriz de confusión
-matriz_confusion = confusion_matrix(y_heldout, y_pred)
-sns.heatmap(matriz_confusion, annot=True, fmt='d', cmap='Blues')
-plt.xlabel('Predicción')
-plt.ylabel('Real')
-plt.title('Matriz de Confusión')
-plt.show()
-#%% GRAFICO EL ARBOL 
-plt.figure(figsize=(50, 20))  
-tree.plot_tree(
-    arbol_elegido,
-    filled=True, 
-    feature_names=[f"pixel_{i}" for i in range(X_dev.shape[1])],  # Nombres de las características (píxeles)
-    class_names=[str(i) for i in range(10)],  # Nombres de las clases (dígitos del 0 al 9)
-    fontsize=10,  
-    max_depth=3  # Limitar la visualización a los primeros 3 niveles
-)
-plt.title("Primeros 3 niveles del arbol de decision final")
+cm = confusion_matrix(y_held, y_held_pred)
+
+# Visualizamos la matriz de confusión
+plt.figure(figsize=(8,6))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=range(10), yticklabels=range(10))
+plt.xlabel("Predicción")
+plt.ylabel("Realidad")
+plt.title("Matriz de Confusión en Held-Out")
 plt.show()
 
-#%% 
+
+#%% Función para predecir el dígito de una imagen nueva
+def predecir_digito(imagen):
+    imagen_reshapeada = np.array(imagen).reshape(1, -1)  # Asegurar el formato correcto
+    prediccion = best_clf.predict(imagen_reshapeada)[0]
+    return prediccion
+
+# %%
+indice = 50  # Seleccionamos una imagen del held-out
+imagen = X_held.iloc[indice]
+digito = predecir_digito(imagen)
+print(f"Dígito predicho: {digito}")
+
+# Mostrar la imagen real
+plt.imshow(imagen.values.reshape(28,28), cmap="gray")
+plt.title(f"Digito predicho por el modelo: {digito}")
+plt.axis("off")
+plt.show()
+
+
