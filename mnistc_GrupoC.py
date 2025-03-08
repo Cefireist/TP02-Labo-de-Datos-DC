@@ -12,7 +12,7 @@ Descripción:
 
 
 Detalles técnicos:
-abcesllueve1
+abceslluevE
 """
 # %% IMPORTACION DE LIBRERIAS
 import pandas as pd
@@ -233,8 +233,7 @@ for digito in range(0,10):
     graficarMuestraDigitos(digito,7)
     
 #%% EJERCICIO 2
-#%% DE los datos extraigo los de 0 y 1, veo el balance y separo en train y test
-# Leo los datos para usar, saco los de 0 y 1  solamente
+#%% EXTRAIGO LOS DATOS DE LOS 0 Y 1, VEO EL BALANCE Y SEPARO EN TRAIN Y TEST
 datos = mnistc[mnistc["labels"].isin([0, 1])]
 labels_bin = datos["labels"]
 
@@ -249,8 +248,9 @@ print("No esta balanceada la cantidad de clases, por eso las balanceo")
 
 X_train, X_test, y_train, y_test = train_test_split(datos, labels_bin,
 test_size = 0.2, stratify = labels_bin, random_state = 160)
+#%% AHORA ME BASO EN DISTANCIAS
 
-#%% GRAFICO LOS PROMEDIOS DEL 0 y el 1 y la resta, por inspeccion decido que pixeles usar
+#%% GRAFICO LOS PROMEDIOS DEL 0, EL 1 Y SU RESTA. POR INSPECCION DECIDO QUE PIXELES USAR
 
 plt.figure(figsize=(12, 6))
 img_prom_0 = img_promedio_digito(datos, 0)
@@ -276,7 +276,7 @@ Viendo las imagenes elijo pixeles de manera arbitraria,
 elijo el del centro, uno a la izquierda y otro a la derecha por ejemplo
 """      
     
-#%% ENTRENO EL MODELO eligiendo 1 pixel
+#%% ENTRENO EL MODELO KNN ELIGIENDO 1 PIXEL
 
 pixeles_seleccionados = [[14, 14]]
 columnas_pixeles = []
@@ -287,7 +287,7 @@ X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
 X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
 entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 1)
-#%% ENTRENO EL MODELO eligiendo 2 pixeles
+#%% ENTRENO EL MODELO KNN ELIGIENDO 2 PIXELES
 
 pixeles_seleccionados = [[8, 14], [14, 14]]
 columnas_pixeles = []
@@ -298,7 +298,7 @@ X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
 X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
 entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 2)
-#%% ENTRENO EL MODELO eligiendo 3 pixeles
+#%% ENTRENO EL MODELO KNN ELIGIENDO 3 PIXELES
 
 pixeles_seleccionados = [[8, 14], [14, 14], [22, 14]]
 columnas_pixeles = []
@@ -310,7 +310,7 @@ X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
 entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 3)
 
-#%% ENTRENO EL MODELO eligiendo 4 pixeles
+#%% ENTRENO EL MODELO KNN ELIGIENDO 4 PIXELES
 
 pixeles_seleccionados = [[8, 14], [11,14], [14, 14], [22, 14]]
 columnas_pixeles = []
@@ -323,7 +323,7 @@ X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 4)
 
 
-#%% ENTRENO EL MODELO eligiendo 5 pixeles
+#%% ENTRENO EL MODELO KNN ELIGIENDO 5 PIXELES
 
 pixeles_seleccionados = [[8, 14], [11,14], [14, 14], [18,14], [22, 14]]
 columnas_pixeles = []
