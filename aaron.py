@@ -97,7 +97,7 @@ plt.ylabel("Frecuencia")
 plt.ylim(0, 9000)
 plt.title("Distribución de las clases")
 plt.show()
-
+#%%
 # desbalance de las clases
 apariciones = etiquetas.value_counts()
 desbalance = apariciones.max() - apariciones.min()
@@ -155,6 +155,7 @@ for numero in range(10):
 plt.show()
 
 
+<<<<<<< HEAD
 
 #%% Ejercicio 1
     ###########
@@ -305,6 +306,9 @@ print(f"F1-score: {f1_n}")
 
 
 
+=======
+#%%
+>>>>>>> 077775e9b9a5aedfa4997d9c41ffe94b87163f31
 
 
 
