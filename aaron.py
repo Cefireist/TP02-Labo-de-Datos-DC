@@ -155,8 +155,6 @@ for numero in range(10):
 plt.show()
 
 
-<<<<<<< HEAD
-
 #%% Ejercicio 2
     ###########
 #%%
@@ -357,11 +355,6 @@ print(f"F1-score: {f1_n}")
 #%%
 
 
-
-
-=======
-#%%
->>>>>>> 077775e9b9a5aedfa4997d9c41ffe94b87163f31
 
 
 
