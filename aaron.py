@@ -157,7 +157,7 @@ plt.show()
 
 <<<<<<< HEAD
 
-#%% Ejercicio 1
+#%% Ejercicio 2
     ###########
 #%%
 
@@ -287,21 +287,74 @@ print(f"Exactitud con {len(cols_seleccionadas)} atributos: {accuracy_n}")
 print(f"Recall: {recall_n}")
 print(f"F1-score: {f1_n}")
 
+#%% distintos valores de k
+
+k = 1
+knn = KNeighborsClassifier(n_neighbors=k)
+knn.fit(X_train_n_desviacion, y_train)  
+
+# predecir sobre el conjunto de test
+y_pred_n = knn.predict(X_test_n_desviacion)
+
+# calcular metricas
+accuracy_n = round(accuracy_score(y_test, y_pred_n), 2)
+recall_n = round(recall_score(y_test, y_pred_n, average="binary"), 2)  
+f1_n = round(f1_score(y_test, y_pred_n, average="binary"), 2)
+
+print('--------------------')
+print(f"Exactitud con k = {k}: {accuracy_n}")
+print(f"Recall: {recall_n}")
+print(f"F1-score: {f1_n}")
+
+
+
+
+# distintos valores de k
+
+k = 10
+knn = KNeighborsClassifier(n_neighbors=k)
+knn.fit(X_train_n_desviacion, y_train)  
+
+# predecir sobre el conjunto de test
+y_pred_n = knn.predict(X_test_n_desviacion)
+
+# calcular metricas
+accuracy_n = round(accuracy_score(y_test, y_pred_n), 2)
+recall_n = round(recall_score(y_test, y_pred_n, average="binary"), 2)  
+f1_n = round(f1_score(y_test, y_pred_n, average="binary"), 2)
+
+print('--------------------')
+print(f"Exactitud con k = {k}: {accuracy_n}")
+print(f"Recall: {recall_n}")
+print(f"F1-score: {f1_n}")
+
+
+# distintos valores de k
+
+k = 25
+knn = KNeighborsClassifier(n_neighbors=k)
+knn.fit(X_train_n_desviacion, y_train)  
+
+# predecir sobre el conjunto de test
+y_pred_n = knn.predict(X_test_n_desviacion)
+
+# calcular metricas
+accuracy_n = round(accuracy_score(y_test, y_pred_n), 2)
+recall_n = round(recall_score(y_test, y_pred_n, average="binary"), 2)  
+f1_n = round(f1_score(y_test, y_pred_n, average="binary"), 2)
+
+print('--------------------')
+print(f"Exactitud con k = {k}: {accuracy_n}")
+print(f"Recall: {recall_n}")
+print(f"F1-score: {f1_n}")
+
+
+
+
+
+
+
 #%%
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
