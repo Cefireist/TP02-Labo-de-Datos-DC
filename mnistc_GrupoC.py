@@ -380,6 +380,18 @@ X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
 entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 5 pixeles")
 
+#%% PRUEBO ELIGIENDO OTROS 15 PIXELES
+pixeles_seleccionados = [[17, 16], [14, 14], [11, 10], [8, 14], [11,14], [14, 14], [18,14], [22, 14], [10,15], [24,13],
+                         [19, 10], [19, 12], [15, 1], [19, 8], [15, 2]]
+columnas_pixeles = []
+for pixel in pixeles_seleccionados:
+    columnas_pixeles.append(obtenerPosColumna(pixel))
+
+X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
+X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 15 pixeles")
+
 
 #%% ACA COMIENZA EL EJERCICIO 3
 #%% DIVIDO LOS DATOS EN DEV Y HELD OUT, DEFINO PARAMETROS DE ENTRENAMIENTO
