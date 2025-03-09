@@ -69,7 +69,7 @@ def obtenerPosColumna(posicion):
     fila, columna = posicion[0], posicion[1]
     return 28*(fila-1) + columna - 1 # resto porque arranca en 0 (? chequear esto
 #%% FUNCION QUE ENTRENA UN KNN CON LOS PIXELES SELECCIONADOS
-def entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, nro_pixeles):
+def entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, titulo):
     rango_k = np.arange(1,25,1)
     
     accuracy = []
@@ -86,18 +86,13 @@ def entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 
         accuracy.append(accuracy_score(y_test, y_pred))
         precision.append(precision_score(y_test, y_pred))
         recall.append(recall_score(y_test, y_pred))
-        cm = confusion_matrix(y_test, y_pred)
-        
-        print(f"K = {k}")
-        print(cm)
-        print("")
     # Grafico la precisión en función de k
     plt.figure(figsize=(10, 6))
     plt.plot(rango_k, accuracy, marker='o', linestyle='--', color='r', label = "accuracy")
     plt.plot(rango_k, precision, marker='o', linestyle='--', color='g', label = "precision")
     plt.plot(rango_k, recall, marker='o', linestyle='--', color='b', label = "recall")
     
-    plt.title(f'Metricas KNN en función de k con {nro_pixeles} pixeles')
+    plt.title(titulo)
     plt.xlabel('Número de vecinos (k)')
     plt.ylabel('valor de metrica')
     plt.legend()
@@ -248,8 +243,27 @@ print("No esta balanceada la cantidad de clases, por eso las balanceo")
 
 X_train, X_test, y_train, y_test = train_test_split(datos, labels_bin,
 test_size = 0.2, stratify = labels_bin, random_state = 160)
-#%% AHORA ME BASO EN DISTANCIAS
+#%% PREPARO LOS DATOS PARA ENTRENAR UN MODELO BASANDOSE EN DISTANCIAS
 
+# obtengo la imagen promedio del 0 y el 1
+imgs_promedio = {}
+for digito in range(0,2):
+    imagenes_digito = mnistc[mnistc["labels"] == digito].drop(columns="labels")
+    imgs_promedio[digito] = np.mean(imagenes_digito, axis=0)
+    
+# saco las columnas de los labels
+X_train_dist = X_train.drop(columns="labels")
+X_test_dist = X_test.drop(columns = "labels")
+# calculo las distancias en train y test respecto al promedio del 0 y el 1
+distancias_al_0_train = np.linalg.norm(X_train_dist - imgs_promedio[0], axis=1)
+distancias_al_1_train = np.linalg.norm(X_train_dist - imgs_promedio[1], axis=1)
+distancias_al_0_test = np.linalg.norm(X_test_dist - imgs_promedio[0], axis=1)
+distancias_al_1_test = np.linalg.norm(X_test_dist - imgs_promedio[1], axis=1)
+# agrego las distancias a los dataframes
+X_train_dist["distancia_al_0"] = distancias_al_0_train
+X_train_dist["distancia_al_1"] = distancias_al_1_train
+X_test_dist["distancia_al_0"] = distancias_al_0_test
+X_test_dist["distancia_al_1"] = distancias_al_1_test
 #%% GRAFICO LOS PROMEDIOS DEL 0, EL 1 Y SU RESTA. POR INSPECCION DECIDO QUE PIXELES USAR
 
 plt.figure(figsize=(12, 6))
@@ -275,29 +289,18 @@ plt.show()
 Viendo las imagenes elijo pixeles de manera arbitraria, 
 elijo el del centro, uno a la izquierda y otro a la derecha por ejemplo
 """      
-    
-#%% ENTRENO EL MODELO KNN ELIGIENDO 1 PIXEL
+#%% ENTRENO EL MODELO KNN, MIRO LA DISTANCIA DE CADA IMAGEN A LA PROMEDIO DE 0 Y 1
 
-pixeles_seleccionados = [[14, 14]]
-columnas_pixeles = []
-for pixel in pixeles_seleccionados:
-    columnas_pixeles.append(obtenerPosColumna(pixel))
+X_train_seleccionado = X_train_dist[["distancia_al_0", "distancia_al_1"]]
+X_test_seleccionado = X_test_dist[["distancia_al_0", "distancia_al_1"]]
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k basandose en distancias")
+#%% ENTRENO EL MODELO KNN, MIRO LA DISTANCIA A LA PROMEDIO DE 0 Y 1, Y EL PIXEL CENTRAL
 
-X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
-X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+# selecciono como columnas las distancias y el pixel central
+X_train_seleccionado = X_train_dist[["distancia_al_0", "distancia_al_1", "392"]]
+X_test_seleccionado = X_test_dist[["distancia_al_0", "distancia_al_1", "392"]]
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k basandose en distancias y un pixel")
 
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 1)
-#%% ENTRENO EL MODELO KNN ELIGIENDO 2 PIXELES
-
-pixeles_seleccionados = [[8, 14], [14, 14]]
-columnas_pixeles = []
-for pixel in pixeles_seleccionados:
-    columnas_pixeles.append(obtenerPosColumna(pixel))
-
-X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
-X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
-
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 2)
 #%% ENTRENO EL MODELO KNN ELIGIENDO 3 PIXELES
 
 pixeles_seleccionados = [[8, 14], [14, 14], [22, 14]]
@@ -308,7 +311,49 @@ for pixel in pixeles_seleccionados:
 X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
 X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 3)
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 3 pixeles")
+#%% ENTRENO EL MODELO KNN ELIGIENDO OTROS 3 PIXELES, SIGUIENDO MAS LA DIAGONAL DEL 1
+pixeles_seleccionados = [[17, 16], [14, 14], [11, 10]]
+columnas_pixeles = []
+for pixel in pixeles_seleccionados:
+    columnas_pixeles.append(obtenerPosColumna(pixel))
+
+X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
+X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 3 pixeles")
+#%% ENTRENO UN MODELO CON DISTANCIAS Y LOS 3 PIXELES DEL MODELO ANTERIOR
+
+pixeles_seleccionados = [[17, 16], [14, 14], [11, 10]]
+columnas_seleccionadas = ["distancia_al_0", "distancia_al_1"]
+for pixel in pixeles_seleccionados:
+    columnas_seleccionadas.append(str(obtenerPosColumna(pixel)))
+
+X_train_seleccionado = X_train_dist[columnas_seleccionadas]
+X_test_seleccionado = X_test_dist[columnas_seleccionadas]
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando distancias y 3 pixeles")
+#%% ENTRENO EL MODELO KNN ELIGIENDO 1 PIXEL, EL CENTRAL
+
+pixeles_seleccionados = [[14, 14]]
+columnas_pixeles = []
+for pixel in pixeles_seleccionados:
+    columnas_pixeles.append(obtenerPosColumna(pixel))
+
+X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
+X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 1 pixel")
+#%% ENTRENO EL MODELO KNN ELIGIENDO 2 PIXELES
+
+pixeles_seleccionados = [[8, 14], [14, 14]]
+columnas_pixeles = []
+for pixel in pixeles_seleccionados:
+    columnas_pixeles.append(obtenerPosColumna(pixel))
+
+X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
+X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 2 pixeles")
 
 #%% ENTRENO EL MODELO KNN ELIGIENDO 4 PIXELES
 
@@ -320,7 +365,7 @@ for pixel in pixeles_seleccionados:
 X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
 X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 4)
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 4 pixeles")
 
 
 #%% ENTRENO EL MODELO KNN ELIGIENDO 5 PIXELES
@@ -333,17 +378,8 @@ for pixel in pixeles_seleccionados:
 X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
 X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
 
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 5)
-#%% PRUEBO ELIGIENDO OTROS 3 PIXELES
-pixeles_seleccionados = [[17, 16], [14, 14], [11, 10]]
-columnas_pixeles = []
-for pixel in pixeles_seleccionados:
-    columnas_pixeles.append(obtenerPosColumna(pixel))
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 5 pixeles")
 
-X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
-X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
-
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, 3)
 
 #%% ACA COMIENZA EL EJERCICIO 3
 #%% DIVIDO LOS DATOS EN DEV Y HELD OUT, DEFINO PARAMETROS DE ENTRENAMIENTO
