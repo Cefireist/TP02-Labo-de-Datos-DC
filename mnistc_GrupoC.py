@@ -10,16 +10,12 @@ Integrantes:
 
 Descripción:
 
-
-Detalles técnicos:
-abceslluevE
 """
 # %% IMPORTACION DE LIBRERIAS
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import os
 
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
@@ -32,16 +28,6 @@ def img_promedio_digito(datos, digito):
     datos_digito = datos[datos["labels"] == digito].drop(columns = "labels")
     img_promedio = np.sum(datos_digito, axis = 0)/len(datos_digito)
     return img_promedio
-#%% FUNCION QUE CALCULA LA DESVIACION ESTANDAR PROMEDIO DE UN DIGITO
-def img_std_promedio_digito(datos, digito):
-    # Filtra los datos para el dígito específico y elimina la columna de etiquetas
-    datos_digito = datos[datos["labels"] == digito].drop(columns="labels")
-    
-    # Calcula la desviación estándar a lo largo del eje 0 (para cada píxel)
-    std_por_pixel = np.std(datos_digito, axis=0)
-    
-    # Devuelve la desviación estándar por píxel (no el promedio)
-    return std_por_pixel
 #%% FUNCION PARA GRAFICAR 15 IMAGENES ALEATORIAS DE UN DIGITO
 def graficarMuestraDigitos(digito, semilla):
     # selecciono las imágenes del dígito
@@ -67,7 +53,7 @@ def graficarMuestraDigitos(digito, semilla):
 #%% FUNCION QUE CALCULA LA POSICION DE LA COLUMNA DE UN PIXEL DE ACUERDO A SUS COORDENADAS
 def obtenerPosColumna(posicion):
     fila, columna = posicion[0], posicion[1]
-    return 28*(fila-1) + columna - 1 # resto porque arranca en 0 (? chequear esto
+    return 28*(fila-1) + columna - 1 # resto porque arranca en 0
 #%% FUNCION QUE ENTRENA UN KNN CON LOS PIXELES SELECCIONADOS
 def entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, titulo):
     rango_k = np.arange(1, 25, 1)
@@ -151,6 +137,7 @@ def GraficarMetricasArbol(alturas,scores_accuracy_train,scores_accuracy_test,
     plt.title(f"Curvas de Accuracy usando {criterio}", fontsize = 18)
     plt.legend(fontsize = 18)
     plt.tick_params(axis='both', which='major', labelsize=18) 
+    plt.xticks(alturas)
     plt.grid(True)
     plt.show()
     
@@ -162,6 +149,7 @@ def GraficarMetricasArbol(alturas,scores_accuracy_train,scores_accuracy_test,
     plt.title(f"Curvas de Precision usando {criterio}", fontsize = 18)
     plt.legend(fontsize = 18)
     plt.tick_params(axis='both', which='major', labelsize=18) 
+    plt.xticks(alturas)
     plt.grid(True)
     plt.show()
     
@@ -173,17 +161,14 @@ def GraficarMetricasArbol(alturas,scores_accuracy_train,scores_accuracy_test,
     plt.title(f"Curvas de Recall usando {criterio}", fontsize = 18)
     plt.legend(fontsize = 18)
     plt.tick_params(axis='both', which='major', labelsize=18) 
+    plt.xticks(alturas)
     plt.grid(True)
     plt.show()
     
 # %% LECTURA DE ARCHIVOS
 
-#rutas
-_ruta_actual = os.getcwd()
-_ruta_mnistc = os.path.join(_ruta_actual, 'mnist_c_fog_tp.csv')
-
-# lectura mnistc, con el index_col podes decirle que columna usar de indice :)
-mnistc = pd.read_csv(_ruta_mnistc, index_col = 0)
+# lectura mnistc, con el index_col podes decirle que columna usar de indice
+mnistc = pd.read_csv('mnist_c_fog_tp.csv', index_col = 0)
 labels = mnistc["labels"]
 # Guardo los pixeles en X 
 X = mnistc.drop(columns = ["labels"]) 
@@ -245,7 +230,9 @@ for i in range(10):
     for j in range(10):
         distancias[i, j] = np.linalg.norm(imgs_promedio[i] - imgs_promedio[j])
 
+# redondeo a enteros
 distancias = distancias.astype(int) 
+# grafico la matriz
 sns.heatmap(distancias, annot=True, fmt='d', cmap='Blues')
 plt.xlabel('Digito')
 plt.ylabel('Digito')
@@ -267,10 +254,12 @@ labels_bin = datos["labels"]
 contador = labels_bin.value_counts()
 print(f"Hay {contador[0]} ceros")
 print(f"hay {contador[1]} unos")
-print("No esta balanceada la cantidad de clases, por eso las balanceo")
 
-# separo los datos en TRAIN y TEST, hago 80 % train y el resto para test,
-# manteniendo el balance de clase
+"""
+separo los datos en TRAIN y TEST, hago 80 % train y el resto para test,
+manteniendo el balance de clase, uso como metrica accuracy ya que mas o menos estan
+balanceadas las clases. De todos modos calculo tambien recall y precision para ver.
+"""
 
 X_train, X_test, y_train, y_test = train_test_split(datos, labels_bin,
 test_size = 0.2, stratify = labels_bin, random_state = 160)
@@ -473,23 +462,28 @@ print(confusion_matrix(y_test, y_pred))
 # se puede extraer la importancia de cada atributo en el arbol, lo hago y armo una matriz
 importancia_pixeles = arbol.feature_importances_
 importancia_matriz = importancia_pixeles.reshape(28, 28)
+pixeles = np.argsort(importancia_pixeles)[::-1]
+
+print(f"Los 10 pixeles mas relevantes son: {pixeles[:10]}" )
 
 # grafico la importancia de cada pixel en una imagen de 28x28
-plt.figure(figsize=(8, 8))
-plt.imshow(importancia_matriz, cmap='gray', interpolation='nearest')
+plt.figure(figsize=(12, 10))
+plt.imshow(importancia_matriz, cmap='gray_r', interpolation='nearest', extent=[0, 28, 28, 0])  # extent ajusta la imagen
+
 cbar = plt.colorbar()
-cbar.set_label("Importancia", fontsize=16)
+cbar.set_label("Importancia", fontsize=18)
 cbar.ax.tick_params(labelsize=14)
 
-plt.title("Importancia de los pixeles segun ubicacion", fontsize=16)
-plt.xlabel("Numero de columna", fontsize=16)
-plt.ylabel("Numero de fila", fontsize=16)
-plt.tick_params(axis='both', which='major', labelsize=14)
+plt.title("Importancia de los píxeles según ubicación", fontsize=18)
+plt.xlabel("Número de columna", fontsize=18)
+plt.ylabel("Número de fila", fontsize=18)
+plt.tick_params(axis='both', which='major', labelsize=13)
+
+plt.xticks(np.arange(0, 29, 1))  
+plt.yticks(np.arange(0, 29, 1))
+plt.grid(visible=True, color='black', linewidth=0.5, linestyle='--')
 plt.show()
 
-# me quedo con los indice de mayor a menor importancia de los pixeles
-pixeles_relevantes = np.argsort(importancia_pixeles)[::-1]  
-print("Pixeles mas relevantes:", pixeles_relevantes[:10]) 
 #%% USO LOS MEJORES 3 PIXELES SEGUN EL ARBOL
 
 X_train_seleccionado = X_train_dist[["406","400","318"]]
@@ -511,6 +505,10 @@ ax.grid(True)
 #%% ACA COMIENZA EL EJERCICIO 3
 #%% DIVIDO LOS DATOS EN DEV Y HELD OUT, DEFINO PARAMETROS DE ENTRENAMIENTO
 
+# Cuento y veo el balance de clases
+contador = labels.value_counts()
+print(contador)
+# Las clases estan bastante balanceadas, asi que evaluamos usando accuracy, de todas formas miro tambien recall y precision
 X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, labels, test_size=0.2, random_state=160, stratify=labels)
 
 alturas = [1,2,3,4,5,6,7,8,9,10]  # alturas del arbol
@@ -586,21 +584,25 @@ plt.show()
 #%% VEO CUALES FUERON LOS PIXELES MAS RELEVANTES
 importancia_pixeles = arbol_elegido.feature_importances_
 importancia_matriz = importancia_pixeles.reshape(28, 28)
+pixeles = np.argsort(importancia_pixeles)[::-1]
 
+print(f"Los 10 pixeles mas relevantes son: {pixeles[:10]}" )
 # grafico la importancia de cada pixel en una imagen de 28x28
-plt.figure(figsize=(8, 8))
-plt.imshow(importancia_matriz, cmap='gray', interpolation='nearest')
+plt.figure(figsize=(12, 10))
+plt.imshow(importancia_matriz, cmap='gray_r', interpolation='nearest', extent=[0, 28, 28, 0])  # extent ajusta la imagen
+
 cbar = plt.colorbar()
-cbar.set_label("Importancia", fontsize=16)
+cbar.set_label("Importancia", fontsize=18)
 cbar.ax.tick_params(labelsize=14)
 
-plt.title("Importancia de los pixeles segun ubicacion", fontsize=16)
-plt.xlabel("Numero de columna", fontsize=16)
-plt.ylabel("Numero de fila", fontsize=16)
-plt.tick_params(axis='both', which='major', labelsize=14)
+plt.title("Importancia de los píxeles según ubicación", fontsize=18)
+plt.xlabel("Número de columna", fontsize=18)
+plt.ylabel("Número de fila", fontsize=18)
+plt.tick_params(axis='both', which='major', labelsize=13)
+
+plt.xticks(np.arange(0, 29, 1))  
+plt.yticks(np.arange(0, 29, 1))
+plt.grid(visible=True, color='black', linewidth=0.5, linestyle='--')
 plt.show()
 
-# me quedo con los indice de mayor a menor importancia de los pixeles
-pixeles_relevantes = np.argsort(importancia_pixeles)[::-1]  
-print("Pixeles mas relevantes:", pixeles_relevantes[:10]) 
 #%% 
