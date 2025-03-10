@@ -305,10 +305,6 @@ Viendo las imagenes elijo pixeles de manera arbitraria,
 elijo el del centro, uno a la izquierda y otro a la derecha por ejemplo
 """   
 #%% ENTRENO EL MODELO KNN ELIGIENDO DIVERSOS PIXELES ARBITRARIAMENTE
-#%% ENTRENO EL MODELO KNN ELIGIENDO DIVERSOS PIXELES ARBITRARIAMENTE
-#%% ENTRENO EL MODELO KNN ELIGIENDO DIVERSOS PIXELES ARBITRARIAMENTE
-#%% ENTRENO EL MODELO KNN ELIGIENDO DIVERSOS PIXELES ARBITRARIAMENTE
-fig, ax = plt.subplots(3, 1, figsize=(12, 18))
 
 # SE ENTRENA ELIGIENDO 1 PIXEL, EL CENTRAL
 pixeles_seleccionados_1 = [[14, 14]]
@@ -338,6 +334,8 @@ X_test_seleccionado_14 = X_test.iloc[:, columnas_pixeles_14].values
 accuracy_train_14, precision_train_14, recall_train_14, accuracy_test_14, precision_test_14, recall_test_14 = entrenar_modelo(X_train_seleccionado_14, X_test_seleccionado_14, y_train, y_test, "Usando 14 pixeles")
 
 #%% GRAFICOS DE ACCURACY
+fig, ax = plt.subplots(3, 1, figsize=(12, 18))
+
 k = np.arange(1,25,1)
 ax[0].plot(k, accuracy_train_1, marker='o', linestyle='--', color='r', label="Train 1 pixel")
 ax[0].plot(k, accuracy_test_1, marker='o', linestyle='-', color='g', label="Test 1 pixel")
@@ -362,21 +360,21 @@ for a in ax:
 plt.tight_layout()
 plt.show()
 #%% GRAFICOS DE PRECISION
-fig_precision, ax_precision = plt.subplots(3, 1, figsize=(12, 18))
+fig, ax = plt.subplots(3, 1, figsize=(12, 18))
 
-ax_precision[0].plot(k, precision_train_1, marker='o', linestyle='--', color='r', label="Train 1 pixel")
-ax_precision[0].plot(k, precision_test_1, marker='o', linestyle='-', color='g', label="Test 1 pixel")
-ax_precision[0].set_title("Precision con 1 pixel", fontsize=18)
+ax[0].plot(k, precision_train_1, marker='o', linestyle='--', color='r', label="Train 1 pixel")
+ax[0].plot(k, precision_test_1, marker='o', linestyle='-', color='g', label="Test 1 pixel")
+ax[0].set_title("Precision con 1 pixel", fontsize=18)
 
-ax_precision[1].plot(k, precision_train_3, marker='o', linestyle='--', color='r', label="Train 3 pixeles")
-ax_precision[1].plot(k, precision_test_3, marker='o', linestyle='-', color='g', label="Test 3 pixeles")
-ax_precision[1].set_title("Precision con 3 pixeles", fontsize=18)
+ax[1].plot(k, precision_train_3, marker='o', linestyle='--', color='r', label="Train 3 pixeles")
+ax[1].plot(k, precision_test_3, marker='o', linestyle='-', color='g', label="Test 3 pixeles")
+ax[1].set_title("Precision con 3 pixeles", fontsize=18)
 
-ax_precision[2].plot(k, precision_train_14, marker='o', linestyle='--', color='r', label="Train 14 pixeles")
-ax_precision[2].plot(k, precision_test_14, marker='o', linestyle='-', color='g', label="Test 14 pixeles")
-ax_precision[2].set_title("Precision con 14 pixeles", fontsize=18)
+ax[2].plot(k, precision_train_14, marker='o', linestyle='--', color='r', label="Train 14 pixeles")
+ax[2].plot(k, precision_test_14, marker='o', linestyle='-', color='g', label="Test 14 pixeles")
+ax[2].set_title("Precision con 14 pixeles", fontsize=18)
 
-for a in ax_precision:
+for a in ax:
     a.legend(fontsize=14)
     a.set_xlabel('Numero de vecinos (k)', fontsize=18)
     a.set_ylabel('Precision', fontsize=18)
@@ -388,21 +386,21 @@ plt.tight_layout()
 plt.show()
 
 #%% GRAFICOS DE RECALL
-fig_recall, ax_recall = plt.subplots(3, 1, figsize=(12, 18))
+fig, ax = plt.subplots(3, 1, figsize=(12, 18))
 
-ax_recall[0].plot(k, recall_train_1, marker='o', linestyle='--', color='r', label="Train 1 pixel")
-ax_recall[0].plot(k, recall_test_1, marker='o', linestyle='-', color='g', label="Test 1 pixel")
-ax_recall[0].set_title("Recall con 1 pixel", fontsize=18)
+ax[0].plot(k, recall_train_1, marker='o', linestyle='--', color='r', label="Train 1 pixel")
+ax[0].plot(k, recall_test_1, marker='o', linestyle='-', color='g', label="Test 1 pixel")
+ax[0].set_title("Recall con 1 pixel", fontsize=18)
 
-ax_recall[1].plot(k, recall_train_3, marker='o', linestyle='--', color='r', label="Train 3 pixeles")
-ax_recall[1].plot(k, recall_test_3, marker='o', linestyle='-', color='g', label="Test 3 pixeles")
-ax_recall[1].set_title("Recall con 3 pixeles", fontsize=18)
+ax[1].plot(k, recall_train_3, marker='o', linestyle='--', color='r', label="Train 3 pixeles")
+ax[1].plot(k, recall_test_3, marker='o', linestyle='-', color='g', label="Test 3 pixeles")
+ax[1].set_title("Recall con 3 pixeles", fontsize=18)
 
-ax_recall[2].plot(k, recall_train_14, marker='o', linestyle='--', color='r', label="Train 14 pixeles")
-ax_recall[2].plot(k, recall_test_14, marker='o', linestyle='-', color='g', label="Test 14 pixeles")
-ax_recall[2].set_title("Recall con 14 pixeles", fontsize=18)
+ax[2].plot(k, recall_train_14, marker='o', linestyle='--', color='r', label="Train 14 pixeles")
+ax[2].plot(k, recall_test_14, marker='o', linestyle='-', color='g', label="Test 14 pixeles")
+ax[2].set_title("Recall con 14 pixeles", fontsize=18)
 
-for a in ax_recall:
+for a in ax:
     a.legend(fontsize=14)
     a.set_xlabel('Numero de vecinos (k)', fontsize=18)
     a.set_ylabel('Recall', fontsize=18)
@@ -479,10 +477,14 @@ importancia_matriz = importancia_pixeles.reshape(28, 28)
 # grafico la importancia de cada pixel en una imagen de 28x28
 plt.figure(figsize=(8, 8))
 plt.imshow(importancia_matriz, cmap='gray', interpolation='nearest')
-plt.colorbar(label="Importancia")
-plt.title("Importancia de los pixeles segun ubicacion")
-plt.xlabel("Numero de columna")
-plt.ylabel("Numero de fila")
+cbar = plt.colorbar()
+cbar.set_label("Importancia", fontsize=16)
+cbar.ax.tick_params(labelsize=14)
+
+plt.title("Importancia de los pixeles segun ubicacion", fontsize=16)
+plt.xlabel("Numero de columna", fontsize=16)
+plt.ylabel("Numero de fila", fontsize=16)
+plt.tick_params(axis='both', which='major', labelsize=14)
 plt.show()
 
 # me quedo con los indice de mayor a menor importancia de los pixeles
@@ -493,7 +495,6 @@ print("Pixeles mas relevantes:", pixeles_relevantes[:10])
 X_train_seleccionado = X_train_dist[["406","400","318"]]
 X_test_seleccionado = X_test_dist[["406","400","318"]]
 accuracy_train, precision_train, recall_train, accuracy_test, precision_test, recall_test = entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de los pixeles mas relevantes")
-
 
 fig, ax = plt.subplots(1, 1, figsize=(12, 6))
 
@@ -582,5 +583,24 @@ tree.plot_tree(arbol_elegido, filled=True,
     class_names=[str(i) for i in range(10)], fontsize=10, max_depth=3)
 plt.title("Primeros 3 niveles del arbol de decision final")
 plt.show()
+#%% VEO CUALES FUERON LOS PIXELES MAS RELEVANTES
+importancia_pixeles = arbol_elegido.feature_importances_
+importancia_matriz = importancia_pixeles.reshape(28, 28)
 
+# grafico la importancia de cada pixel en una imagen de 28x28
+plt.figure(figsize=(8, 8))
+plt.imshow(importancia_matriz, cmap='gray', interpolation='nearest')
+cbar = plt.colorbar()
+cbar.set_label("Importancia", fontsize=16)
+cbar.ax.tick_params(labelsize=14)
+
+plt.title("Importancia de los pixeles segun ubicacion", fontsize=16)
+plt.xlabel("Numero de columna", fontsize=16)
+plt.ylabel("Numero de fila", fontsize=16)
+plt.tick_params(axis='both', which='major', labelsize=14)
+plt.show()
+
+# me quedo con los indice de mayor a menor importancia de los pixeles
+pixeles_relevantes = np.argsort(importancia_pixeles)[::-1]  
+print("Pixeles mas relevantes:", pixeles_relevantes[:10]) 
 #%% 
