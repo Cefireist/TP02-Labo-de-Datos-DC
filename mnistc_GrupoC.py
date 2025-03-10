@@ -70,43 +70,44 @@ def obtenerPosColumna(posicion):
     return 28*(fila-1) + columna - 1 # resto porque arranca en 0 (? chequear esto
 #%% FUNCION QUE ENTRENA UN KNN CON LOS PIXELES SELECCIONADOS
 def entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, titulo):
-    rango_k = np.arange(1,25,1)
+    rango_k = np.arange(1, 25, 1)
     
-    accuracy = []
-    precision = []
-    recall = []
+    accuracy_train = []
+    precision_train = []
+    recall_train = []
+    accuracy_test = []
+    precision_test = []
+    recall_test = []
     
-    # pruebo diferentes valores de k
     for k in rango_k:
         knn = KNeighborsClassifier(n_neighbors=k)
         knn.fit(X_train_seleccionado, y_train)
-        # veo las predicciones
-        y_pred = knn.predict(X_test_seleccionado)
-        # Calculo las metricas
-        accuracy.append(accuracy_score(y_test, y_pred))
-        precision.append(precision_score(y_test, y_pred))
-        recall.append(recall_score(y_test, y_pred))
-    # Grafico la precisión en función de k
-    plt.figure(figsize=(10, 6))
-    plt.plot(rango_k, accuracy, marker='o', linestyle='--', color='r', label = "accuracy")
-    plt.plot(rango_k, precision, marker='o', linestyle='--', color='g', label = "precision")
-    plt.plot(rango_k, recall, marker='o', linestyle='--', color='b', label = "recall")
+        
+        # Predicciones para TRAIN
+        y_train_pred = knn.predict(X_train_seleccionado)
+        accuracy_train.append(accuracy_score(y_train, y_train_pred))
+        precision_train.append(precision_score(y_train, y_train_pred, average='macro'))
+        recall_train.append(recall_score(y_train, y_train_pred, average='macro'))
+        
+        # Predicciones para TEST
+        y_test_pred = knn.predict(X_test_seleccionado)
+        accuracy_test.append(accuracy_score(y_test, y_test_pred))
+        precision_test.append(precision_score(y_test, y_test_pred, average='macro'))
+        recall_test.append(recall_score(y_test, y_test_pred, average='macro'))
     
-    plt.title(titulo)
-    plt.xlabel('Número de vecinos (k)')
-    plt.ylabel('valor de metrica')
-    plt.legend()
-    plt.xticks(rango_k)  
-    plt.grid(True)
-    plt.show()
+    return accuracy_train, precision_train, recall_train, accuracy_test, precision_test, recall_test
 #%% FUNCION QUE ENTRENA UN ARBOL SEGUN HIPERPARAMETROS ELEGIDOS, CRITERIO Y MAXIMA PROFUNDIDAD
-def EntrenarArbol(alturas, kf, criterio):
+def EntrenarArbol(alturas, kf, criterio, X_dev, y_dev):
     # matrices donde almacenar los resultados
-    resultados_accuracy = np.zeros((nsplits, len(alturas)))
-    resultados_precision = np.zeros((nsplits, len(alturas)))
-    resultados_recall = np.zeros((nsplits, len(alturas)))
+    resultados_accuracy_train = np.zeros((nsplits, len(alturas)))
+    resultados_precision_train = np.zeros((nsplits, len(alturas)))
+    resultados_recall_train = np.zeros((nsplits, len(alturas)))
     
-    # en cada folds, entrenamos cada modelo y guardo todo en las matrices de resultados
+    resultados_accuracy_test = np.zeros((nsplits, len(alturas)))
+    resultados_precision_test = np.zeros((nsplits, len(alturas)))
+    resultados_recall_test = np.zeros((nsplits, len(alturas)))
+    
+    # en cada fold, entreno cada modelo y guardo todo en las matrices de resultados
     for i, (train_index, test_index) in enumerate(kf.split(X_dev, y_dev)):
         kf_X_train, kf_X_test = X_dev.iloc[train_index], X_dev.iloc[test_index]
         kf_y_train, kf_y_test = y_dev.iloc[train_index], y_dev.iloc[test_index]
@@ -116,19 +117,64 @@ def EntrenarArbol(alturas, kf, criterio):
             arbol = tree.DecisionTreeClassifier(max_depth=hmax, criterion=criterio)
             arbol.fit(kf_X_train, kf_y_train)
             
-            # hago la prediccion y calculo las metricas
-            pred = arbol.predict(kf_X_test)
-            accuracy = accuracy_score(kf_y_test, pred)
-            # se usa macro para multiclase
-            precision = precision_score(kf_y_test, pred, average='macro')
-            recall = recall_score(kf_y_test, pred, average='macro')  
+            # obtengo la prediccion y las metricas para el conjunto de train
+            pred_train = arbol.predict(kf_X_train)
+            accuracy_train = accuracy_score(kf_y_train, pred_train)
+            precision_train = precision_score(kf_y_train, pred_train, average='macro')
+            recall_train = recall_score(kf_y_train, pred_train, average='macro')
             
-            # guardo los resultados
-            resultados_accuracy[i, j] = accuracy
-            resultados_precision[i, j] = precision
-            resultados_recall[i, j] = recall
+            # obtengo la prediccion y las metricas para el conjunto de test
+            pred_test = arbol.predict(kf_X_test)
+            accuracy_test = accuracy_score(kf_y_test, pred_test)
+            precision_test = precision_score(kf_y_test, pred_test, average='macro')
+            recall_test = recall_score(kf_y_test, pred_test, average='macro')
+            
+            # guardo los resultados en las matrices
+            resultados_accuracy_train[i, j] = accuracy_train
+            resultados_precision_train[i, j] = precision_train
+            resultados_recall_train[i, j] = recall_train
+            
+            resultados_accuracy_test[i, j] = accuracy_test
+            resultados_precision_test[i, j] = precision_test
+            resultados_recall_test[i, j] = recall_test
     
-    return resultados_accuracy, resultados_precision, resultados_recall
+    return resultados_accuracy_train, resultados_accuracy_test, resultados_precision_train, resultados_precision_test, resultados_recall_train, resultados_recall_test
+#%% FUNCION QUE RECIBE LAS METRICAS DE TRAIN Y TEST Y LAS GRAFICA
+def GraficarMetricasArbol(alturas,scores_accuracy_train,scores_accuracy_test,
+                          scores_precision_test, scores_precision_train,scores_recall_test,scores_recall_train, criterio):
+    
+    plt.figure(figsize=(12, 6))
+    plt.plot(alturas, scores_accuracy_train, marker='o', linestyle='--', color='r', label="Train Accuracy")
+    plt.plot(alturas, scores_accuracy_test, marker='o', linestyle='--', color='g', label="Test Accuracy")
+    plt.xlabel("Profundidad maxima", fontsize = 18)
+    plt.ylabel("Accuracy", fontsize = 18)
+    plt.title(f"Curvas de Accuracy usando {criterio}", fontsize = 18)
+    plt.legend(fontsize = 18)
+    plt.tick_params(axis='both', which='major', labelsize=18) 
+    plt.grid(True)
+    plt.show()
+    
+    plt.figure(figsize=(12, 6))
+    plt.plot(alturas, scores_precision_train, marker='o', linestyle='--', color='r', label="Train Precision")
+    plt.plot(alturas, scores_precision_test, marker='o', linestyle='--', color='g', label="Test Precision")
+    plt.xlabel("Profundidad maxima", fontsize = 18)
+    plt.ylabel("Precision", fontsize = 18)
+    plt.title(f"Curvas de Precision usando {criterio}", fontsize = 18)
+    plt.legend(fontsize = 18)
+    plt.tick_params(axis='both', which='major', labelsize=18) 
+    plt.grid(True)
+    plt.show()
+    
+    plt.figure(figsize=(12, 6))
+    plt.plot(alturas, scores_recall_train, marker='o', linestyle='--', color='r', label="Train Recall")
+    plt.plot(alturas, scores_recall_test, marker='o', linestyle='--', color='g', label="Test Recall")
+    plt.xlabel("Profundidad maxima", fontsize = 18)
+    plt.ylabel("Recall", fontsize = 18)
+    plt.title(f"Curvas de Recall usando {criterio}", fontsize = 18)
+    plt.legend(fontsize = 18)
+    plt.tick_params(axis='both', which='major', labelsize=18) 
+    plt.grid(True)
+    plt.show()
     
 # %% LECTURA DE ARCHIVOS
 
@@ -166,6 +212,7 @@ for i in [10, 11, 13, 14]:
 axes[12].imshow(suma_todos_digitos, cmap='inferno')
 axes[12].set_title("Suma de todos los dígitos")
 
+# Al usar im estoy usando la ultima como referencia de intensidad
 fig.suptitle("Promedio de intensidad por dígito", fontsize=18)
 cax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  
 cbar = fig.colorbar(im, cax=cax)
@@ -182,22 +229,6 @@ print(f"Porcentaje de píxeles con intensidad menor a 100: {100*pixeles_menores_
 plt.imshow(mascara, cmap='gray')
 plt.title("Píxeles con intensidad menor a 100 (negros)")
 plt.show()
-#%% GRAFICO LA IMAGEN DE LA DESVIACION ESTANDAR PROMEDIO DE TODOS LOS DIGITOS (QUIZAS SACARLO)
-
-# Esto si no los usamos quizas habria que sacarlo
-fig, axes = plt.subplots(2, 5, figsize=(12, 6))
-axes = axes.flatten()
-for digito in range(0,10):
-    std_por_pixel = img_std_promedio_digito(mnistc, digito)
-    img_std = np.array(std_por_pixel).reshape((28, 28))
-    
-    im = axes[digito].imshow(img_std, cmap='inferno')
-    axes[digito].set_title(f"Digito {digito}")
-    
-fig.suptitle("Promedio de desviacion estandar por dígito", fontsize=18)
-cax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  
-cbar = fig.colorbar(im, cax=cax)
-cbar.set_label("Desviacion estandar promedio", fontsize=14)
 #%% EJERCICIO 1.b
 #%% CALCULO LAS DISTANCIAS ENTRE LAS IMAGENES PROMEDIO DE CADA DIGITO
 # pienso cada imagen como un vector en R^784, entonces la distancia 
@@ -218,7 +249,7 @@ distancias = distancias.astype(int)
 sns.heatmap(distancias, annot=True, fmt='d', cmap='Blues')
 plt.xlabel('Digito')
 plt.ylabel('Digito')
-plt.title('Matriz de distancias entre imagenes')
+plt.title('Matriz de distancias entre digitos')
 plt.show()
 
 #%% EJERCICIO 1.c
@@ -248,66 +279,139 @@ X_train = X_train.drop(columns="labels")
 X_test = X_test.drop(columns = "labels")
 #%% GRAFICO LOS PROMEDIOS DEL 0, EL 1 Y SU RESTA. POR INSPECCION DECIDO QUE PIXELES USAR
 
-plt.figure(figsize=(12, 6))
+fig, ax = plt.subplots(1, 3, figsize=(12, 6))
+
 img_prom_0 = img_promedio_digito(datos, 0)
-plt.subplot(1, 3, 1)
-plt.imshow(np.array(img_prom_0).reshape((28, 28)), cmap='gray')
-plt.title("Promedio del 0")
+ax[0].imshow(np.array(img_prom_0).reshape((28, 28)), cmap='gray')
+ax[0].set_title("Promedio del 0", fontsize = 18)
 
 img_prom_1 = img_promedio_digito(datos, 1)
-plt.subplot(1, 3, 2)  
-plt.imshow(np.array(img_prom_1).reshape((28, 28)), cmap='gray')
-plt.title("Promedio del 1")
+ax[1].imshow(np.array(img_prom_1).reshape((28, 28)), cmap='gray')
+ax[1].set_title("Promedio del 1", fontsize = 18)
 
-plt.subplot(1, 3, 3)  
 resta = np.abs(img_prom_1-img_prom_0)
-plt.imshow(np.array(resta).reshape((28, 28)), cmap='gray')
-plt.title("Resta")
+# uso como referencia esta imagen para la barra
+im = ax[2].imshow(np.array(resta).reshape((28, 28)), cmap='gray')
+ax[2].set_title("Resta", fontsize = 18)
 
-plt.tight_layout()
+fig.suptitle("Promedio de intensidad por dígito", fontsize=18)
+cax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  
+cbar = fig.colorbar(im, cax=cax)  # Usar la imagen 'im' como referencia
+cbar.set_label("Intensidad promedio", fontsize=16)
 plt.show()
 
 """
 Viendo las imagenes elijo pixeles de manera arbitraria, 
 elijo el del centro, uno a la izquierda y otro a la derecha por ejemplo
 """   
-#%% ENTRENO EL MODELO KNN ELIGIENDO 1 PIXEL ARBITRARIAMENTE, EL CENTRAL
+#%% ENTRENO EL MODELO KNN ELIGIENDO DIVERSOS PIXELES ARBITRARIAMENTE
+#%% ENTRENO EL MODELO KNN ELIGIENDO DIVERSOS PIXELES ARBITRARIAMENTE
+#%% ENTRENO EL MODELO KNN ELIGIENDO DIVERSOS PIXELES ARBITRARIAMENTE
+#%% ENTRENO EL MODELO KNN ELIGIENDO DIVERSOS PIXELES ARBITRARIAMENTE
+fig, ax = plt.subplots(3, 1, figsize=(12, 18))
 
-pixeles_seleccionados = [[14, 14]]
-columnas_pixeles = []
-for pixel in pixeles_seleccionados:
-    columnas_pixeles.append(obtenerPosColumna(pixel))
+# SE ENTRENA ELIGIENDO 1 PIXEL, EL CENTRAL
+pixeles_seleccionados_1 = [[14, 14]]
+columnas_pixeles_1 = [obtenerPosColumna(pixel) for pixel in pixeles_seleccionados_1]
 
-X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
-X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+X_train_seleccionado_1 = X_train.iloc[:, columnas_pixeles_1].values
+X_test_seleccionado_1 = X_test.iloc[:, columnas_pixeles_1].values
 
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 1 pixel")
-# Este da una accuracy de cerca del 50 %, es como tirar una moneda
-#%% ENTRENO EL MODELO KNN ELIGIENDO 3 PIXELES ARBITRARIAMENTE
+accuracy_train_1, precision_train_1, recall_train_1, accuracy_test_1, precision_test_1, recall_test_1 = entrenar_modelo(X_train_seleccionado_1, X_test_seleccionado_1, y_train, y_test, "Usando 1 pixel")
 
-pixeles_seleccionados = [[8, 14], [14, 14], [22, 14]]
-columnas_pixeles = []
-for pixel in pixeles_seleccionados:
-    columnas_pixeles.append(obtenerPosColumna(pixel))
+# SE ENTRENA ELIGIENDO 3 PIXELES, EL CENTRAL Y DOS A LOS COSTADOS, DONDE HAY MAXIMOS DEL 0
+pixeles_seleccionados_3 = [[8, 14], [14, 14], [22, 14]]
+columnas_pixeles_3 = [obtenerPosColumna(pixel) for pixel in pixeles_seleccionados_3]
 
-X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
-X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+X_train_seleccionado_3 = X_train.iloc[:, columnas_pixeles_3].values
+X_test_seleccionado_3 = X_test.iloc[:, columnas_pixeles_3].values
 
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 3 pixeles")
+accuracy_train_3, precision_train_3, recall_train_3, accuracy_test_3, precision_test_3, recall_test_3 = entrenar_modelo(X_train_seleccionado_3, X_test_seleccionado_3, y_train, y_test, "Usando 3 pixeles")
 
-#%% ENTRENO EL MODELO KNN ELIGIENDO 15 PIXELES ARBITRARIAMENTE
-pixeles_seleccionados = [[17, 16], [14, 14], [11, 10], [8, 14], [11,14], [14, 14], [18,14], [22, 14], [10,15], [24,13],
-                         [19, 10], [19, 12], [15, 1], [19, 8], [15, 2]]
-columnas_pixeles = []
-for pixel in pixeles_seleccionados:
-    columnas_pixeles.append(obtenerPosColumna(pixel))
+# SE ENTRENA ELIGIENDO 14 PIXELES, LOS DE LA FILA CENTRAL
+pixeles_seleccionados_14 = [[14, col] for col in range(15)]
+columnas_pixeles_14 = [obtenerPosColumna(pixel) for pixel in pixeles_seleccionados_14]
 
-X_train_seleccionado = X_train.iloc[:, columnas_pixeles].values
-X_test_seleccionado = X_test.iloc[:, columnas_pixeles].values
+X_train_seleccionado_14 = X_train.iloc[:, columnas_pixeles_14].values
+X_test_seleccionado_14 = X_test.iloc[:, columnas_pixeles_14].values
 
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k usando 15 pixeles")
+accuracy_train_14, precision_train_14, recall_train_14, accuracy_test_14, precision_test_14, recall_test_14 = entrenar_modelo(X_train_seleccionado_14, X_test_seleccionado_14, y_train, y_test, "Usando 14 pixeles")
 
-# como cambia mucho eligiendo cuales pixeles se usan, veo de usar como atributos las distancias a  la imagen promedio del 0 y el 1
+#%% GRAFICOS DE ACCURACY
+k = np.arange(1,25,1)
+ax[0].plot(k, accuracy_train_1, marker='o', linestyle='--', color='r', label="Train 1 pixel")
+ax[0].plot(k, accuracy_test_1, marker='o', linestyle='-', color='g', label="Test 1 pixel")
+ax[0].set_title("Accuracy con 1 pixel", fontsize=18)
+
+ax[1].plot(k, accuracy_train_3, marker='o', linestyle='--', color='r', label="Train 3 pixeles")
+ax[1].plot(k, accuracy_test_3, marker='o', linestyle='-', color='g', label="Test 3 pixeles")
+ax[1].set_title("Accuracy con 3 pixeles", fontsize=18)
+
+ax[2].plot(k, accuracy_train_14, marker='o', linestyle='--', color='r', label="Train 14 pixeles")
+ax[2].plot(k, accuracy_test_14, marker='o', linestyle='-', color='g', label="Test 14 pixeles")
+ax[2].set_title("Accuracy con 14 pixeles", fontsize=18)
+
+for a in ax:
+    a.legend(fontsize=14)
+    a.set_xlabel('Numero de vecinos (k)', fontsize=18)
+    a.set_ylabel('Accuracy', fontsize=18)
+    a.set_xticks(k)
+    a.tick_params(axis='both', which='major', labelsize=14)
+    a.grid(True)
+
+plt.tight_layout()
+plt.show()
+#%% GRAFICOS DE PRECISION
+fig_precision, ax_precision = plt.subplots(3, 1, figsize=(12, 18))
+
+ax_precision[0].plot(k, precision_train_1, marker='o', linestyle='--', color='r', label="Train 1 pixel")
+ax_precision[0].plot(k, precision_test_1, marker='o', linestyle='-', color='g', label="Test 1 pixel")
+ax_precision[0].set_title("Precision con 1 pixel", fontsize=18)
+
+ax_precision[1].plot(k, precision_train_3, marker='o', linestyle='--', color='r', label="Train 3 pixeles")
+ax_precision[1].plot(k, precision_test_3, marker='o', linestyle='-', color='g', label="Test 3 pixeles")
+ax_precision[1].set_title("Precision con 3 pixeles", fontsize=18)
+
+ax_precision[2].plot(k, precision_train_14, marker='o', linestyle='--', color='r', label="Train 14 pixeles")
+ax_precision[2].plot(k, precision_test_14, marker='o', linestyle='-', color='g', label="Test 14 pixeles")
+ax_precision[2].set_title("Precision con 14 pixeles", fontsize=18)
+
+for a in ax_precision:
+    a.legend(fontsize=14)
+    a.set_xlabel('Numero de vecinos (k)', fontsize=18)
+    a.set_ylabel('Precision', fontsize=18)
+    a.set_xticks(k)
+    a.tick_params(axis='both', which='major', labelsize=14)
+    a.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+#%% GRAFICOS DE RECALL
+fig_recall, ax_recall = plt.subplots(3, 1, figsize=(12, 18))
+
+ax_recall[0].plot(k, recall_train_1, marker='o', linestyle='--', color='r', label="Train 1 pixel")
+ax_recall[0].plot(k, recall_test_1, marker='o', linestyle='-', color='g', label="Test 1 pixel")
+ax_recall[0].set_title("Recall con 1 pixel", fontsize=18)
+
+ax_recall[1].plot(k, recall_train_3, marker='o', linestyle='--', color='r', label="Train 3 pixeles")
+ax_recall[1].plot(k, recall_test_3, marker='o', linestyle='-', color='g', label="Test 3 pixeles")
+ax_recall[1].set_title("Recall con 3 pixeles", fontsize=18)
+
+ax_recall[2].plot(k, recall_train_14, marker='o', linestyle='--', color='r', label="Train 14 pixeles")
+ax_recall[2].plot(k, recall_test_14, marker='o', linestyle='-', color='g', label="Test 14 pixeles")
+ax_recall[2].set_title("Recall con 14 pixeles", fontsize=18)
+
+for a in ax_recall:
+    a.legend(fontsize=14)
+    a.set_xlabel('Numero de vecinos (k)', fontsize=18)
+    a.set_ylabel('Recall', fontsize=18)
+    a.set_xticks(k)
+    a.tick_params(axis='both', which='major', labelsize=14)
+    a.grid(True)
+
+plt.tight_layout()
+plt.show()
 #%% PREPARO LOS DATOS PARA ENTRENAR UN MODELO BASANDOSE EN DISTANCIAS
 
 # obtengo la imagen promedio del 0 y el 1
@@ -329,17 +433,30 @@ X_train_dist["distancia_al_1"] = distancias_al_1_train
 X_test_dist["distancia_al_0"] = distancias_al_0_test
 X_test_dist["distancia_al_1"] = distancias_al_1_test
 #%% ENTRENO EL MODELO KNN, MIRO LA DISTANCIA DE CADA IMAGEN A LA PROMEDIO DE 0 Y 1
-
 X_train_seleccionado = X_train_dist[["distancia_al_0", "distancia_al_1"]]
 X_test_seleccionado = X_test_dist[["distancia_al_0", "distancia_al_1"]]
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k basandose en distancias")
+accuracy_train, precision_train, recall_train, accuracy_test, precision_test, recall_test = entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de k basandose en distancias")
 
-# Mejoran bastante los resultados para usar solo dos valores, aunque requiere un preprocesamiento de los datos.
-# Voy a usar un arbol para que encuentre los pixeles mas relevantes, asi uso esos para un nuevo KNN
+fig, ax = plt.subplots(1, 1, figsize=(12, 6))
 
+k = np.arange(1,25,1)
+ax.plot(k, accuracy_train, marker='o', linestyle='--', color='r', label="Train")
+ax.plot(k, accuracy_test, marker='o', linestyle='-', color='g', label="Test")
+ax.set_title("Accuracy en funcion de los k basandose en distancias", fontsize=18)
+ax.legend(fontsize=14)
+ax.set_xlabel('Numero de vecinos (k)', fontsize=18)
+ax.set_ylabel('Accuracy', fontsize=18)
+ax.set_xticks(k)
+ax.tick_params(axis='both', which='major', labelsize=14)
+ax.grid(True)
+
+"""
+MEJORA MUCHO LA ACCURACY, AUNQUE REQUIERE UN PREPROCESAMIENTO DE LOS DATOS.
+USAMOS UN ARBOL PARA QUE ENCUENTRE LOS PIXELES MAS RELEVANTES, ASI VEMOS COMO QUEDA UN KNN CON LO 3 MEJORES PIXELES.
+"""
 #%% ENTRENO UN ARBOL PARA VER CUALES CONSIDERA COMO LOS PIXELES MAS IMPORTANTES
 
-arbol = tree.DecisionTreeClassifier(max_depth=10, random_state=160)
+arbol = tree.DecisionTreeClassifier(max_depth = 3, random_state = 160)
 arbol.fit(X_train, y_train)
 # veo la prediccion
 y_pred = arbol.predict(X_test)
@@ -372,60 +489,69 @@ plt.show()
 pixeles_relevantes = np.argsort(importancia_pixeles)[::-1]  
 print("Pixeles mas relevantes:", pixeles_relevantes[:10]) 
 #%% USO LOS MEJORES 3 PIXELES SEGUN EL ARBOL
+
 X_train_seleccionado = X_train_dist[["406","400","318"]]
 X_test_seleccionado = X_test_dist[["406","400","318"]]
-entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de los pixeles mas relevantes segun un arbol")
-  
+accuracy_train, precision_train, recall_train, accuracy_test, precision_test, recall_test = entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de los pixeles mas relevantes")
+
+
+fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+
+k = np.arange(1,25,1)
+ax.plot(k, accuracy_train, marker='o', linestyle='--', color='r', label="Train")
+ax.plot(k, accuracy_test, marker='o', linestyle='-', color='g', label="Test")
+ax.set_title("Accuracy en funcion de k basandose en los pixeles mas relevantes", fontsize=18)
+ax.legend(fontsize=14)
+ax.set_xlabel('Numero de vecinos (k)', fontsize=18)
+ax.set_ylabel('Accuracy', fontsize=18)
+ax.set_xticks(k)
+ax.tick_params(axis='both', which='major', labelsize=14)
+ax.grid(True)
 #%% ACA COMIENZA EL EJERCICIO 3
 #%% DIVIDO LOS DATOS EN DEV Y HELD OUT, DEFINO PARAMETROS DE ENTRENAMIENTO
 
 X_dev, X_heldout, y_dev, y_heldout = train_test_split(X, labels, test_size=0.2, random_state=160, stratify=labels)
 
-alturas = [1,2,3,4,6,8,10]  # alturas del arbol
+alturas = [1,2,3,4,5,6,7,8,9,10]  # alturas del arbol
 nsplits = 3  # numero de folds
 # generamos los folds, stratifiedkfold permite dividir de forma balanceada los folds
 kf = StratifiedKFold(n_splits=nsplits, shuffle=True, random_state=7)
 
 #%% ENTRENO ARBOLES USANDO GINI
-resultados_accuracy, resultados_precision, resultados_recall = EntrenarArbol(alturas, kf, "gini")
 
-# calculo el promedio de todos los folds
-scores_accuracy = resultados_accuracy.mean(axis=0)
-scores_precision = resultados_precision.mean(axis=0)
-scores_recall = resultados_recall.mean(axis=0)
+resultados_accuracy_train, resultados_accuracy_test, resultados_precision_train, resultados_precision_test, resultados_recall_train, resultados_recall_test = EntrenarArbol(alturas, kf, "gini", X_dev, y_dev)
 
-# grafica las métricas
-plt.plot(alturas, scores_accuracy, marker='o', linestyle='--', color='r', label="Accuracy")
-plt.plot(alturas, scores_precision, marker='o', linestyle='--', color='g', label="Precision")
-plt.plot(alturas, scores_recall, marker='o', linestyle='--', color='b', label="Recall")
-plt.xlabel("Profundidad maxima")
-plt.ylabel("Metrica")
-plt.title("Metricas en funcion de la profundidad usando GINI")
-plt.legend()
-plt.grid(True)
-plt.show()
+# calculo el promedio de accuracy, precision y recall para todos los folds
+scores_accuracy_train = resultados_accuracy_train.mean(axis=0)
+scores_accuracy_test = resultados_accuracy_test.mean(axis=0)
 
-#%% ENTRENO ARBOLES USANDO ENTROPIA
-resultados_accuracy, resultados_precision, resultados_recall = EntrenarArbol(alturas, kf, "entropy")
+scores_precision_train = resultados_precision_train.mean(axis=0)
+scores_precision_test = resultados_precision_test.mean(axis=0)
 
-# calculo el promedio de todos los folds
-scores_accuracy = resultados_accuracy.mean(axis=0)
-scores_precision = resultados_precision.mean(axis=0)
-scores_recall = resultados_recall.mean(axis=0)
+scores_recall_train = resultados_recall_train.mean(axis=0)
+scores_recall_test = resultados_recall_test.mean(axis=0)
 
-# Graficar las métricas
-plt.plot(alturas, scores_accuracy, marker='o', linestyle='--', color='r', label="Accuracy")
-plt.plot(alturas, scores_precision, marker='o', linestyle='--', color='g', label="Precision")
-plt.plot(alturas, scores_recall, marker='o', linestyle='--', color='b', label="Recall")
-plt.xlabel("Profundidad maxima")
-plt.ylabel("Metrica")
-plt.title("Metricas en funcion de la profundidad usando ENTROPIA")
-plt.legend()
-plt.grid(True)
-plt.show()
+# GRAFICO LOS RESULTADOS DE LAS METRICAS PARA EL CRITERIO GINI
+GraficarMetricasArbol(alturas, scores_accuracy_train, scores_accuracy_test, scores_precision_test, scores_precision_train, scores_recall_test, scores_recall_train, "Gini")
+
+#%% ENTRENO ARBOLES USANDO ENTROPY
+
+resultados_accuracy_train, resultados_accuracy_test, resultados_precision_train, resultados_precision_test, resultados_recall_train, resultados_recall_test = EntrenarArbol(alturas, kf, "entropy", X_dev, y_dev)
+
+# calculo el promedio de accuracy, precision y recall para todos los folds
+scores_accuracy_train = resultados_accuracy_train.mean(axis=0)
+scores_accuracy_test = resultados_accuracy_test.mean(axis=0)
+
+scores_precision_train = resultados_precision_train.mean(axis=0)
+scores_precision_test = resultados_precision_test.mean(axis=0)
+
+scores_recall_train = resultados_recall_train.mean(axis=0)
+scores_recall_test = resultados_recall_test.mean(axis=0)
+
+GraficarMetricasArbol(alturas, scores_accuracy_train, scores_accuracy_test, scores_precision_test, scores_precision_train, scores_recall_test, scores_recall_train, "entropia")
 
 #%% entreno el modelo elegido en el conjunto dev entero para la mejor profundidad
-mejor_profundidad = 10
+mejor_profundidad = 6
 mejor_criterio = "entropy"
 arbol_elegido = tree.DecisionTreeClassifier(max_depth=mejor_profundidad, criterion=mejor_criterio)
 arbol_elegido.fit(X_dev, y_dev)
