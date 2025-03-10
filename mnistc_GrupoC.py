@@ -243,6 +243,9 @@ print("No esta balanceada la cantidad de clases, por eso las balanceo")
 
 X_train, X_test, y_train, y_test = train_test_split(datos, labels_bin,
 test_size = 0.2, stratify = labels_bin, random_state = 160)
+
+X_train = X_train.drop(columns="labels")
+X_test = X_test.drop(columns = "labels")
 #%% PREPARO LOS DATOS PARA ENTRENAR UN MODELO BASANDOSE EN DISTANCIAS
 
 # obtengo la imagen promedio del 0 y el 1
@@ -251,15 +254,14 @@ for digito in range(0,2):
     imagenes_digito = mnistc[mnistc["labels"] == digito].drop(columns="labels")
     imgs_promedio[digito] = np.mean(imagenes_digito, axis=0)
     
-# saco las columnas de los labels
-X_train_dist = X_train.drop(columns="labels")
-X_test_dist = X_test.drop(columns = "labels")
 # calculo las distancias en train y test respecto al promedio del 0 y el 1
-distancias_al_0_train = np.linalg.norm(X_train_dist - imgs_promedio[0], axis=1)
-distancias_al_1_train = np.linalg.norm(X_train_dist - imgs_promedio[1], axis=1)
-distancias_al_0_test = np.linalg.norm(X_test_dist - imgs_promedio[0], axis=1)
-distancias_al_1_test = np.linalg.norm(X_test_dist - imgs_promedio[1], axis=1)
+distancias_al_0_train = np.linalg.norm(X_train - imgs_promedio[0], axis=1)
+distancias_al_1_train = np.linalg.norm(X_train - imgs_promedio[1], axis=1)
+distancias_al_0_test = np.linalg.norm(X_test - imgs_promedio[0], axis=1)
+distancias_al_1_test = np.linalg.norm(X_test - imgs_promedio[1], axis=1)
 # agrego las distancias a los dataframes
+X_train_dist = X_train.copy()
+X_test_dist = X_test.copy()
 X_train_dist["distancia_al_0"] = distancias_al_0_train
 X_train_dist["distancia_al_1"] = distancias_al_1_train
 X_test_dist["distancia_al_0"] = distancias_al_0_test
@@ -288,7 +290,46 @@ plt.show()
 """
 Viendo las imagenes elijo pixeles de manera arbitraria, 
 elijo el del centro, uno a la izquierda y otro a la derecha por ejemplo
-"""      
+"""  
+#%%
+# creo y entreno un arbol para ver los pixeles mas importantes, aquellos de las primeras preguntas
+arbol = tree.DecisionTreeClassifier(max_depth=10, random_state=160)
+arbol.fit(X_train, y_train)
+# veo la prediccion
+y_pred = arbol.predict(X_test)
+
+# calculo las metricas
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+
+print(f"Accuracy: {accuracy:.2f}")
+print(f"Precision: {precision:.2f}")
+print(f"Recall: {recall:.2f}")
+print("Matriz de confusión:")
+print(confusion_matrix(y_test, y_pred))
+
+# se puede extraer la importancia de cada atributo en el arbol, lo hago y armo una matriz
+importancia_pixeles = arbol.feature_importances_
+importancia_matriz = importancia_pixeles.reshape(28, 28)
+
+# grafico la importancia de cada pixel en una imagen de 28x28
+plt.figure(figsize=(8, 8))
+plt.imshow(importancia_matriz, cmap='gray', interpolation='nearest')
+plt.colorbar(label="Importancia")
+plt.title("Importancia de los pixeles segun ubicacion")
+plt.xlabel("Numero de columna")
+plt.ylabel("Numero de fila")
+plt.show()
+
+# me quedo con los indice de mayor a menor importancia de los pixeles
+pixeles_relevantes = np.argsort(importancia_pixeles)[::-1]  
+print("Pixeles mas relevantes:", pixeles_relevantes[:10])    
+#%% USO LO MEJORES 3 PIXELES SEGUN EL ARBOL
+X_train_seleccionado = X_train_dist[["406","400","318"]]
+X_test_seleccionado = X_test_dist[["406","400","318"]]
+entrenar_modelo(X_train_seleccionado, X_test_seleccionado, y_train, y_test, "Metricas en funcion de los pixeles mas relevantes segun un arbol")
+
 #%% ENTRENO EL MODELO KNN, MIRO LA DISTANCIA DE CADA IMAGEN A LA PROMEDIO DE 0 Y 1
 
 X_train_seleccionado = X_train_dist[["distancia_al_0", "distancia_al_1"]]
