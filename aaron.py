@@ -30,8 +30,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, recall_score, f1_score, confusion_matrix, classification_report
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import cross_val_score
 import os
+
+
 
 #%% 
 ################
@@ -63,6 +67,11 @@ def graficar_imagenes(df_valores, filas, cols, title):
             num_fila = cols*i + j
             ax[i, j].imshow(df_valores.iloc[num_fila].to_numpy().reshape(28, 28), cmap='gray')
             ax[i][j].axis('off')
+            
+# Funcion que dado valores de la imagen, un modelo, clasifica
+def clasificador_numeros(img_data, clasificador):
+    num_pred = clasificador.predict(img_data)
+    print(f"valor predicho por el modelo: {num_pred[0]}")
             
 
 #%% 
@@ -156,7 +165,7 @@ plt.show()
 
 
 #%% Ejercicio 2
-    ###########
+###########
 #%%
 
 # subconjunto de digitos 0 o 1
@@ -173,120 +182,94 @@ print(f'diferencia entre clase 0 y clase 1 = {len(unos) - len(ceros)}')
 #%%
 
 # train y test split
-
 X = ceros_y_unos.drop(columns=['labels', 'indice'])  # data imagenes ceros_y_unos
-y = ceros_y_unos['labels'] # etiquetas ceros_y_unos
+y = ceros_y_unos['labels']  # etiquetas ceros_y_unos
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=50, shuffle=True)
 
-#%% Con X_train, y_train entreno el modelo, con X_test, y_test lo testeo y evaluo metricas
+#%% Con X_train, y_train entreno el modelo, con X_test, y_test lo testeo y evalúo métricas
 
 # prueba solo con 3 atributos
-
-# uso las primeras 3 columnas
 X_train_first_3 = X_train.iloc[:, :3]
 X_test_first_3 = X_test.iloc[:, :3]
 
 # Crear y ajustar el modelo KNN con k=3
-k=3
+k = 3
 knn = KNeighborsClassifier(n_neighbors=k)
-knn.fit(X_train_first_3, y_train) # entreno con los primeros 3 atributos
+knn.fit(X_train_first_3, y_train)  # entreno con los primeros 3 atributos
 
 # Predecir sobre el conjunto de test
 y_pred_3 = knn.predict(X_test_first_3)
 
 # Calcular la exactitud (accuracy)
-accuracy_3 = round(accuracy_score(y_test, y_pred_3), 2) # medimos exactitud comparando valores predecidos y reales
+accuracy_3 = round(accuracy_score(y_test, y_pred_3), 2)  # medimos exactitud comparando valores predecidos y reales
 print(f"Exactitud con 3 atributos: {accuracy_3}")
 
 
-#%% Eligo los 3 atributos con mayor desviacion 
+#%% Elijo los 3 atributos con mayor desviación 
 
-# agarrar los 3 puntos con mayor desviacion de cada clase y uso esos atributos para entrenar en cada clase
 n = 3
 
-# Calcular la desviación estándar por pixel (columna)
+# Calcular la desviacion estandar por pixel (columna)
 desviacion_0 = np.std(ceros.to_numpy(), axis=0)
 desviacion_1 = np.std(unos.to_numpy(), axis=0)
 
-# Agregar la desviacion estandar como fila en el DataFrame
+# Agregar la desviacion estándar como fila en el DataFrame
 ceros.loc['desviacion'] = desviacion_0
 unos.loc['desviacion'] = desviacion_1
 
-# agarrar n cols con mayor desviacion
+# Agarrar n columnas con mayor desviación
 cols_mayor_desv_0 = np.argsort(desviacion_0)[-n:]  # indices de las n columnas con mayor desviacion en ceros
 cols_mayor_desv_1 = np.argsort(desviacion_1)[-n:]  # indices de las n columnas con mayor desviacion en unos
 
-# unir los indices unicos de ambas clases
+# Unir los indices unicos de ambas clases
 cols_seleccionadas = np.unique(np.concatenate([cols_mayor_desv_0, cols_mayor_desv_1]))
 
-# seleccionar las columnas correspondientes en X_train y X_test
+# Seleccionar las columnas correspondientes en X_train y X_test
 X_train_n_desviacion = X_train.iloc[:, cols_seleccionadas]
 X_test_n_desviacion = X_test.iloc[:, cols_seleccionadas]
 
-# crear y ajustar el modelo knn con k=3
-k=3
+# Crear y ajustar el modelo knn con k=3
 knn = KNeighborsClassifier(n_neighbors=k)
 knn.fit(X_train_n_desviacion, y_train) 
 
-# predecir sobre el conjunto de test
+# Predecir sobre el conjunto de test
 y_pred_n = knn.predict(X_test_n_desviacion)
 
-# calcular metricas
+# Calcular metricas
 accuracy_n = round(accuracy_score(y_test, y_pred_n), 2)
 recall_n = round(recall_score(y_test, y_pred_n, average="binary"), 2)
 f1_n = round(f1_score(y_test, y_pred_n, average="binary"), 2)
 
-print(f"Exactitud con {len(cols_seleccionadas)} atributos: {accuracy_n}")
+print(f"Exactitud con {len(cols_seleccionadas)} atributos (con mayor desviacion): {accuracy_n}")
 print(f"Recall: {recall_n}")
 print(f"F1-score: {f1_n}")
 
 
-#%% pruebo con n atributos segun su desviacion
+#%% distintos valores de k
 
-# agarrar los 3 puntos con mayor desviacion de cada clase y uso esos atributos para entrenar en cada clase
-# numero de puntos que quieres seleccionar por clase (mayor desviación estandar)
-n = 40
+n = 3
 
-# calcular la desviación estandar por pixel (columna)
+# calcular la desviacion estandar por pixel (columna)
 desviacion_0 = np.std(ceros.to_numpy(), axis=0)
 desviacion_1 = np.std(unos.to_numpy(), axis=0)
 
-# agregar la desviacion estandar como fila en el DataFrame
+# agregar la desviacion estandar como fila en el df
 ceros.loc['desviacion'] = desviacion_0
 unos.loc['desviacion'] = desviacion_1
 
-# agarrar n cols con mayor desviacion
+# agarrar n columnas con mayor desviacion
 cols_mayor_desv_0 = np.argsort(desviacion_0)[-n:]
 cols_mayor_desv_1 = np.argsort(desviacion_1)[-n:]  
 
-# uno los indices de ambas clases, pero si hay repes que busque otro/s de forma que haya n en total
+# uno los indices de ambas clases
 cols_seleccionadas = list(cols_mayor_desv_0)
 
 # seleccionar las columnas correspondientes en X_train y X_test
 X_train_n_desviacion = X_train.iloc[:, cols_seleccionadas]
 X_test_n_desviacion = X_test.iloc[:, cols_seleccionadas]
 
-# crear y ajustar el modelo knn con k=3
-k=3
-knn = KNeighborsClassifier(n_neighbors=k)
-knn.fit(X_train_n_desviacion, y_train)  
-
-# predecir sobre el conjunto de test
-y_pred_n = knn.predict(X_test_n_desviacion)
-
-# calcular metricas
-accuracy_n = round(accuracy_score(y_test, y_pred_n), 2)
-recall_n = round(recall_score(y_test, y_pred_n, average="binary"), 2)  
-f1_n = round(f1_score(y_test, y_pred_n, average="binary"), 2)
-
-print('--------------------')
-print(f"Exactitud con {len(cols_seleccionadas)} atributos: {accuracy_n}")
-print(f"Recall: {recall_n}")
-print(f"F1-score: {f1_n}")
-
-#%% distintos valores de k
-
+# crear y ajustar el modelo knn con k=1
 k = 1
 knn = KNeighborsClassifier(n_neighbors=k)
 knn.fit(X_train_n_desviacion, y_train)  
@@ -304,11 +287,8 @@ print(f"Exactitud con k = {k}: {accuracy_n}")
 print(f"Recall: {recall_n}")
 print(f"F1-score: {f1_n}")
 
-
-
-
+#%%
 # distintos valores de k
-
 k = 10
 knn = KNeighborsClassifier(n_neighbors=k)
 knn.fit(X_train_n_desviacion, y_train)  
@@ -326,10 +306,9 @@ print(f"Exactitud con k = {k}: {accuracy_n}")
 print(f"Recall: {recall_n}")
 print(f"F1-score: {f1_n}")
 
-
+#%%
 # distintos valores de k
-
-k = 25
+k = 150
 knn = KNeighborsClassifier(n_neighbors=k)
 knn.fit(X_train_n_desviacion, y_train)  
 
@@ -347,17 +326,147 @@ print(f"Recall: {recall_n}")
 print(f"F1-score: {f1_n}")
 
 
+#%% pruebo con n atributos segun su desviacion
+n = 40
+
+# calcular la desviacion estandar por pixel (columna)
+desviacion_0 = np.std(ceros.to_numpy(), axis=0)
+desviacion_1 = np.std(unos.to_numpy(), axis=0)
+
+# agregar la desviacion estandar como fila en el dataframe
+ceros.loc['desviacion'] = desviacion_0
+unos.loc['desviacion'] = desviacion_1
+
+# agarrar n columnas con mayor desviacion
+cols_mayor_desv_0 = np.argsort(desviacion_0)[-n:]
+cols_mayor_desv_1 = np.argsort(desviacion_1)[-n:]  
+
+# uno los indices de ambas clases, pero si hay repes que busque otro/s de forma que haya n en total
+cols_seleccionadas = list(cols_mayor_desv_0)
+
+# seleccionar las columnas correspondientes en x_train y x_test
+X_train_n_desviacion = X_train.iloc[:, cols_seleccionadas]
+X_test_n_desviacion = X_test.iloc[:, cols_seleccionadas]
+
+# crear y ajustar el modelo knn con k=3
+k = 3
+KNN = KNeighborsClassifier(n_neighbors=k)
+KNN.fit(X_train_n_desviacion, y_train)  
+
+# predecir sobre el conjunto de test
+y_pred_n = KNN.predict(X_test_n_desviacion)
+
+# calcular metricas
+accuracy_n = round(accuracy_score(y_test, y_pred_n), 2)
+recall_n = round(recall_score(y_test, y_pred_n, average="binary"), 2)  
+f1_n = round(f1_score(y_test, y_pred_n, average="binary"), 2)
+
+print('--------------------')
+print(f"exactitud con {len(cols_seleccionadas)} atributos con mayor desviacion: {accuracy_n}")
+print(f"recall: {recall_n}")
+print(f"f1-score: {f1_n}")
 
 
+#%% Ejercicio 3
+    ###########
+    
+#%%
 
+# dividir en entrenamiento y validacion 
+X_train, X_val, y_train, y_val = train_test_split(mnistc.drop(columns=['indice', 'labels']), 
+                                                  mnistc['labels'], 
+                                                  test_size=0.2, 
+                                                  random_state=10)
+
+# ajustar el modelo de arbol de decision para distintas profundidades
+profundidades = range(1, 11)
+accuracy_scores = []
+
+for profundidad in profundidades:
+    # crear el clasificador con la profundidad actual
+    arbol = DecisionTreeClassifier(max_depth=profundidad, random_state=10)
+    arbol.fit(X_train.drop(columns=['indice', 'labels']), X_train['labels'])
+    
+    # predecir en el conjunto de validacion
+    y_pred = arbol.predict(X_val.drop(columns=['indice', 'labels']))
+    
+    # calcular la exactitud
+    accuracy = accuracy_score(X_val['labels'], y_pred)
+    accuracy_scores.append(accuracy)
+
+# graficar los resultados
+plt.plot(profundidades, accuracy_scores, marker='o')
+plt.xlabel('Profundidad del arbol')
+plt.ylabel('Exactitud')
+plt.title('Exactitud del arbol de decision vs profundidad')
+plt.show()
 
 
 #%%
+# configurar los rangos de los hiperparámetros
+depths = range(1, 11)
+criterions = ['gini', 'entropy']
 
+# inicializar una lista para almacenar los resultados
+results = []
 
+# iterar sobre diferentes combinaciones de hiperparámetros
+for depth in depths:
+    for criterion in criterions:
+        # crear el modelo de árbol de decisión con los hiperparámetros
+        arbol = DecisionTreeClassifier(max_depth=depth, criterion=criterion, max_features=None, random_state=10)
+        
+        # realizar validación cruzada con 5-folds y calcular la exactitud promedio
+        cv_scores = cross_val_score(arbol, X_train, y_train, cv=5, scoring='accuracy')
+        mean_score = np.mean(cv_scores)
+        
+        # guardar los resultados para cada configuración
+        results.append((depth, criterion, mean_score))
 
+# ordenar los resultados por la exactitud en orden descendente
+best_result = sorted(results, key=lambda x: x[2], reverse=True)[0]
 
+# mostrar el mejor modelo
+print("mejor configuración de hiperparámetros:")
+print(f"profundidad: {best_result[0]}")
+print(f"criterio: {best_result[1]}")
+print(f"exactitud promedio: {round(best_result[2], 2)}")
 
+#%%
+# entrenar el modelo final con los mejores hiperparámetros (profundidad 10, criterio 'entropy')
+arbol_model = DecisionTreeClassifier(max_depth=best_result[0], criterion=best_result[1], max_features=None, random_state=10)
+
+# ajustar el modelo con los datos de entrenamiento (todo el conjunto de desarrollo)
+arbol_model.fit(X_train, y_train)
+
+# predecir las clases en el conjunto held-out (en este caso, X_val)
+y_pred = arbol_model.predict(X_val)
+
+# evaluar el rendimiento del modelo en el conjunto held-out
+accuracy_held_out = accuracy_score(y_val, y_pred)
+recall_held_out = recall_score(y_val, y_pred, average='macro')  # 'macro' para balance entre clases
+f1_held_out = f1_score(y_val, y_pred, average='macro')  # 'macro' para balance entre clases
+
+# mostrar el rendimiento
+print(f"precisión en el conjunto held-out: {round(accuracy_held_out, 2)}")
+print(f"recall en el conjunto held-out: {round(recall_held_out, 2)}")
+print(f"f1-score en el conjunto held-out: {round(f1_held_out, 2)}")
+
+# matriz de confusión
+conf_matrix = confusion_matrix(y_val, y_pred)
+
+# visualizar la matriz de confusión
+plt.figure(figsize=(10, 7))
+sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=True, yticklabels=True)
+plt.title("matriz de confusión")
+plt.xlabel("predicciones")
+plt.ylabel("verdaderos valores")
+plt.show()
+
+# reporte de clasificación para todas las clases
+print("\nreporte de clasificación:")
+print(classification_report(y_val, y_pred))
+#%%
 
 
 
