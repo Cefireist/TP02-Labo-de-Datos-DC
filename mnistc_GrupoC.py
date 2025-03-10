@@ -185,13 +185,6 @@ def GraficarMetricasArbol(alturas,scores_accuracy_train,scores_accuracy_test,
     plt.xticks(alturas)
     plt.grid(True)
     plt.show()
-# %% LECTURA DE ARCHIVOS
-
-# lectura mnistc, con el index_col podes decirle que columna usar de indice
-mnistc = pd.read_csv('mnist_c_fog_tp.csv', index_col = 0)
-labels = mnistc["labels"]
-# Guardo los pixeles en X 
-X = mnistc.drop(columns = ["labels"]) 
 
 #%% EJERCICIO 1.a
 #%% GRAFICO LA IMAGEN PROMEDIO DE TODOS LOS DIGITOS
