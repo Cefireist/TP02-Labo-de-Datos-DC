@@ -1,7 +1,7 @@
 #%% DATOS CARATULA
 """
 Laboratorio de datos - Verano 2025
-Trabajo Práctico N° 2
+Trabajo Práctico N° 2 
 
 Integrantes:
 - Sebastian Ceffalotti - sebastian.ceffalotti@gmail.com
@@ -9,10 +9,11 @@ Integrantes:
 - Rodrigo Coppa - rodrigo.coppa98@gmail.com
 
 Descripción:
-
+En este script trabajamos con el conjunto de datos MNIST-C (version fog), lo analizamos y entrenamos modelos de clasificación para predecir clases
 
 Detalles técnicos:
-abceslluevE
+- Lenguaje: Python
+- Librerías utilizadas: numpy, matplotlib, seaborn, os, pandas y scikit-learn
 """
 # %% IMPORTACION DE LIBRERIAS
 import pandas as pd
@@ -25,6 +26,24 @@ from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
 from sklearn import tree
+
+
+#%% 
+################
+# Carga de datos 
+################
+
+#%%
+
+#rutas
+_ruta_actual = os.getcwd()
+_ruta_mnistc = os.path.join(_ruta_actual, 'mnist_c_fog_tp.csv')
+
+# lectura mnistc, con el index_col podes decirle que columna usar de indice :)
+mnistc = pd.read_csv(_ruta_mnistc, index_col = 0)
+labels = mnistc["labels"]
+# Guardo los pixeles en X 
+X = mnistc.drop(columns = ["labels"]) 
 
 #%% DECLARACION DE FUNCIONES
 #%% FUNCION QUE CALCULA LA INTENSIDAD PROMEDIO DE UN DIGITO
@@ -176,17 +195,6 @@ def GraficarMetricasArbol(alturas,scores_accuracy_train,scores_accuracy_test,
     plt.grid(True)
     plt.show()
     
-# %% LECTURA DE ARCHIVOS
-
-#rutas
-_ruta_actual = os.getcwd()
-_ruta_mnistc = os.path.join(_ruta_actual, 'mnist_c_fog_tp.csv')
-
-# lectura mnistc, con el index_col podes decirle que columna usar de indice :)
-mnistc = pd.read_csv(_ruta_mnistc, index_col = 0)
-labels = mnistc["labels"]
-# Guardo los pixeles en X 
-X = mnistc.drop(columns = ["labels"]) 
 
 #%% EJERCICIO 1.a
 #%% GRAFICO LA IMAGEN PROMEDIO DE TODOS LOS DIGITOS
